@@ -1,0 +1,35 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+class CreateGoodsPrincipalsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('goods_principals', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('bn', 20)->default('')->unique();
+            $table->string('name', 20)->default('');
+            $table->string('principal', 20)->default('');
+            $table->integer('created_at')->default(time())->unsigned();
+            $table->integer('updated_at')->default(time())->unsigned();
+            $table->string('extra', 255)->default('');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('goods_principals');
+    }
+}

@@ -1,0 +1,22 @@
+<?php
+
+namespace App\Models\Admin\Task;
+
+use Illuminate\Database\Eloquent\Model;
+use App\Api\Kuaidiniao\Search;
+
+
+class Express extends Model {
+
+    protected $table = 'order_express';
+    protected $dateFormat = 'U';
+
+
+    public function log($company, $bn){
+        $kdniaoSearch = new Search();
+        $kdJson = $kdniaoSearch->getOrderTracesByJson($company, $bn);
+        $bool = $this->where('ExpressNumber', $bn)->update(['status'=>1, 'express_log'=>$kdJson]);
+        return $kdJson;
+    }
+
+}

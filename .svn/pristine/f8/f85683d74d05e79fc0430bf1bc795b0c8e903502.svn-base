@@ -1,0 +1,31 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Goods;
+
+use App\Http\Controllers\Controller;
+
+class RankController extends Controller {
+
+
+    protected function getRules(){
+        $recordMax = strtotime(request()->recordStart) + 2*30*24*3600;
+        $deliveryMax = strtotime(request()->deliveryStart) + 2*30*24*3600;
+
+        return [
+            'platForm'    => 'required',
+            'recordStart' => 'required_without:deliveryStart',
+            'recordEnd'   => 'required_with:recordStart|min_date:recordStart|max_date:'.$recordMax,
+
+            'deliveryStart' => 'required_without:recordStart',
+            'deliveryEnd'   => 'required_with:deliveryStart|min_date:deliveryStart|max_date:'.$deliveryMax,
+        ];
+    }
+
+    protected function getMessages(){
+        return [
+            'required_without'  => '记录时间，发货时间必须填一个',
+            'required_with'     => '开始，截止时间必须同时填写',
+            'max_date'          => '时间间隔不能超过2个月',
+        ];
+    }
+}

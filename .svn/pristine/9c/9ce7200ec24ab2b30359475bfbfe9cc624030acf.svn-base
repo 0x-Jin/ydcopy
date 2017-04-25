@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Customer;
+
+use Illuminate\Http\Request as Req;
+use App\Http\Controllers\Controller;
+use App\Models\Admin\Customer\Rebuy as Mdl;
+
+
+class RebuyController extends Controller {
+
+
+    public function post(Req $req, Mdl $mdl){
+        $this->validate($req, [
+            'platForm'      => 'required',
+            'skuCode'      => 'required',
+            'orderStart'    => 'required|before:orderEnd',
+            'orderEnd'      => 'required|after:orderStart',
+        ], [
+            'platForm.required'     => '请选择店铺',
+            'skuCode.required'      => '请输入商品规格码',
+            'orderStart.required'   => '请输入开始时间',
+            'orderEnd.required'     => '请输入截止时间',
+        ]);
+
+        $from = $req->nocache ? 'db' : 'file';
+        $params = $req->except(['_token', 'nocache']);
+        $req->flashExcept('_token');
+
+        $data = $params ? $mdl->getData($params, $from) : [];
+
+        return view($this->getCurrentPath(), ['data'=>$data, 'file'=>$mdl->dataPath]);
+    }
+}

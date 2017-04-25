@@ -1,0 +1,204 @@
+@extends('Admin.Layouts.master')
+@section('title', '快递跟踪')
+@section('breadcrumb')
+    <li>工作管理</li>
+    <li class="active">快递跟踪</li>
+@endsection
+
+@section('toolbar')
+    <div class="row form-inline form-ranking">
+        <div class="form-group">
+            <a class="btn btn-warning btn-refresh mr10" href="javascript:;">
+                <i class="fa fa-refresh"></i>&nbsp;刷新
+            </a>
+        </div>
+        <div class="form-group pull-right">
+            <label class="control-label">平台：</label>
+            {{ Form::select('platForm', config('self.select.platForms3.opts'), null, ['class'=>'form-control mr10']) }}
+            <label class="control-label">状态：</label>
+            {{ Form::select('status', ['-1'=>'全部','未订阅', '已订阅', '跟踪', '签收', '问题件', '不包含未订阅'], null, ['class'=>'form-control mr10']) }}
+            <label class="control-label">单号：</label>
+            {{ Form::text('ExpressNumber', null, ['class'=>'form-control mr10', 'placeholder'=>"物流单号", 'style'=>'width:175px;']) }}
+            <label class="control-label">发货时间：</label>
+            {{ Form::input('text', 'deliveryStart', null, ['class'=>'form-control datepicker']) }}
+            <span class="add-on control-label">至</span>
+            {{ Form::input('text', 'deliveryEnd', null, ['class'=>'form-control datepicker mr10']) }}
+            <label class="control-label">更新时间：</label>
+            {{ Form::input('text', 'updatedStart', null, ['class'=>'form-control datepicker']) }}
+            <span class="add-on control-label">至</span>
+            {{ Form::input('text', 'updatedEnd', null, ['class'=>'form-control datepicker mr10']) }}
+
+            <label class="checkbox inline mr10">
+                {{ Form::checkbox('isError', 1, null) }}
+                包含异常
+            </label>
+            <a class="btn btn-success btn-search" href="javascript:;">
+                <i class="fa fa-search"></i>&nbsp;搜索
+            </a>
+        </div>
+    </div>
+@endsection
+
+@section('table')
+    <div class="row col-md-12">
+        <div class="box">
+            <table id="table"></table>
+        </div>
+    </div>
+@endsection
+
+@section('js')
+    @parent
+    <script>
+        $(function(){
+            $('.btn-refresh').one('click', refreshFunc = function(){
+                $('#table').bootstrapTable('refresh');
+                $(this).one('click', refreshFunc);
+            }) ;
+
+            $('#table').bootstrapTable({
+                url: g.current_path,
+                method: 'post',
+                queryParamsType: 'limit',
+                queryParams: function(params){
+                    params._token = g._token;
+                    params.platForm = $('select[name=platForm]').val();
+                    params.status = $('select[name=status]').val();
+                    params.ExpressNumber = $('input[name=ExpressNumber]').val();
+                    params.deliveryStart = $('input[name=deliveryStart]').val();
+                    params.deliveryEnd = $('input[name=deliveryEnd]').val();
+                    params.updatedEnd = $('input[name=updatedEnd]').val();
+                    params.updatedEnd = $('input[name=updatedEnd]').val();
+                    params.isError = $('input[name=isError]').is(":checked") ? 1 : 0;
+                    return params;
+                },
+                striped: true,
+                uniqueId: 'id',
+                pagination: true,
+                sidePagination: 'server',
+                detailView: true,
+                detailFormatter: function(index, row){
+<<<<<<< .mine
+||||||| .r319
+                    if(row.reason){
+                        return '<span style="margin-left: 40px;color:red;">' + row.reason + '</span>';
+                    }
+=======
+                    if(row.Reason){
+                        return '<span style="margin-left: 40px;color:red;">' + row.Reason + '</span>';
+                    }
+>>>>>>> .r331
+                    var str = row.express_trace.replace(/(\\u)(\w{4}|\w{2})/gi, function($0,$1,$2){
+                        return String.fromCharCode(parseInt($2,16));
+                    });
+                    var objs = jQuery.parseJSON(str);
+                    var newStr = '<dl style="margin-left: 40px;">';
+                    for(i in objs.reverse()){
+                        newStr += '<dt><span class="mr10">'+objs[i].AcceptTime+'</span><span>'+objs[i].AcceptStation+'</span></dt>';
+                    }
+                    newStr += '</dl>';
+                    return newStr;
+                },
+                columns: [{
+                    field: 'TradeId',
+                    title: '交易号'
+                }, {
+                    field: 'ExpressNameActual',
+                    title: '公司'
+                }, {
+                    field: 'ExpressNumber',
+                    title: '单号'
+                }, {
+                    field: 'ShopName',
+                    title: '店铺'
+                }, {
+                    field: 'PayTime',
+                    title: '支付时间'
+                }, {
+                    field: 'DeliveryDate',
+                    title: '发货时间'
+                }, {
+                    field: 'updated_at',
+                    title: '更新时间',
+                    formatter: function (val, row, index) {
+                        var objDate = new Date(val * 1000);
+                        var year    = objDate.getFullYear();
+                        var month   = objDate.getMonth() + 1;
+                        var day     = objDate.getDate();
+                        var hour    = objDate.getHours();
+                        var minute  = objDate.getMinutes();
+                        var second  = objDate.getSeconds();
+
+                        if( month < 10) month = '0' + month;
+                        if( day < 10) day = '0' + day;
+                        if( hour < 10) hour = '0' + hour;
+                        if( minute < 10) minute = '0' + minute;
+                        if( second < 10) second = '0' + second;
+                        return year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second;
+                    }
+                }, {
+                    field: 'status',
+                    title: '状态',
+                    formatter: function(val, row, index){
+                        var text = ['未订阅', '已订阅', '跟踪', '签收', '问题件'];
+                        return text[row.status];
+                    }
+                }, {
+                    class: 'col-xs-1',
+                    align: 'center',
+                    formatter: function(val, row, index){
+                        domOp = '' +
+                        '<button data-id='+row.id+' class="btn btn-xs btn-info btn-update mr10">' +
+                        '   <i class="fa fa-pencil-square-o"></i>更新' +
+                        '</button>';
+                        return domOp;
+                    }
+                }]
+            });
+
+            $('#table tbody').on('click', '.btn-edit', function(){
+                $('#table').bootstrapTable('expandRow', 1);
+            });
+
+            $('#table tbody').on('click', '.btn-update', function(){
+                var id = $(this).attr('data-id');
+                var row = $('#table').bootstrapTable('getRowByUniqueId', id);
+                $.post(
+                    '{{ url()->current().'/trace' }}',
+                    { ExpressNumber: row.ExpressNumber, _token: g._token},
+                    function(data){
+                        $.gritter.add({
+                            title: '提示',
+                            text: data.msg,
+                            sticky: false,
+                            time: 1000,
+                            class_name: 'my-sticky-class'
+                        });
+                        $('#table').bootstrapTable('refresh');
+                    }
+                );
+            });
+
+            $('.btn-search').one('click', searchFunc=function(){
+                $('#table').bootstrapTable('refresh',
+                    {
+                        query: {
+                            platForm: $('select[name=platForm]').val(),
+                            status: $('select[name=status]').val(),
+                            ExpressNumber: $('input[name=ExpressNumber]').val(),
+                            deliveryStart: $('input[name=deliveryStart]').val(),
+                            deliveryEnd: $('input[name=deliveryEnd]').val(),
+                            updatedEnd: $('input[name=updatedEnd]').val(),
+                            updatedEnd: $('input[name=updatedEnd]').val(),
+                            isError: $('input[name=isError]').is(":checked") ? 1 : 0,
+                            offset: 0
+                        }
+                    }
+                );
+                $(this).one('click', searchFunc);
+            });
+        });
+    </script>
+
+
+@endsection

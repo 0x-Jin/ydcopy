@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Tool;
+
+use Validator;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\PageService\Admin\Tool\OrderGoods as Model;
+
+class OrderGoodsController extends Controller {
+    public function index(){
+        $viewData = [
+            'model'  => null,
+            'extra'  => [
+                'currentCtrl' => $this->getCutCtrlPath(),
+                'exportUrl' => 'javascript:alert("请先查询");',
+            ],
+        ];
+        return view($this->getCutCtrlPath(), $viewData);
+    }
+
+    public function post(Request $req, Model $mdl){
+        $validator = Validator::make($req->all(), [
+            'item' => 'required',
+        ]);
+        if ($validator->fails()) {
+            $data = [];
+        } else {
+            $data = $mdl->getData($req->except('_token'));
+        }
+        return response()->json($data);
+    }
+}

@@ -1,0 +1,261 @@
+@extends('Admin.Layouts.main')
+@section('title', '任务管理')
+@section('breadcrumb')
+    <li>工作管理</li>
+    <li class="active">任务管理</li>
+@endsection
+@section('inputs')
+    <div class="form-group">
+        <label class="control-label">{{ Config::get('self.select.consult.label') }}：</label>
+        {{ Form::select('platform', Config::get('self.select.consult.opts'), old('platform'), ['class'=>'form-control','id'=>'form_platform', 'tabindex'=>'-1', 'aria-hidden'=>'true']) }}
+    </div>
+
+    <div class="form-group">
+        <label class="control-label">提交时间：</label>
+        {{ Form::input('text', 'mathStart', old('mathStart'), ['class'=>'form-control datepicker','id'=>'mathStart']) }}
+        <span class="add-on control-label">至</span>
+        {{ Form::input('text', 'mathEnd', old('mathEnd'), ['class'=>'form-control datepicker','id'=>'mathEnd']) }}
+    </div>
+    
+
+    <div  class="form-group">
+         <label class="control-label">{{ Config::get('self.select.taskstatus.label') }}：</label>
+        {{ Form::select('status', Config::get('self.select.taskstatus.opts'), old('platForm'), ['class'=>'form-control','id'=>'status', 'tabindex'=>'-1', 'aria-hidden'=>'true']) }}
+    </div>
+
+    <div  class="form-group">
+         <label class="control-label">需求部门：</label>
+         <select name="giveperson" id='giveperson' class="form-control">
+         <option value="">全部</option>
+         @foreach($department as $v)
+            <option value="{{$v->Department_Id}}">{{$v->Name}}</option>
+         @endforeach
+         </select>
+    </div>
+
+    <div  class="form-group">
+         <label class="control-label">分工部门：</label>
+         <select name="toperson" id='toperson' class="form-control">
+         <option value="">全部</option>
+         @foreach($department as $v)
+            <option value="{{$v->Department_Id}}">{{$v->Name}}</option>
+         @endforeach
+         </select>
+    </div>
+
+    <div  class="form-group">
+         <label class="control-label">标题：</label>
+        {{ Form::input('text', 'title',old('title'),['class'=>'form-control','id'=>'title']) }}
+    </div>
+@endsection
+@section('button')
+        @parent
+        <button type='button' class="btn btn-warning mr10" onclick="add_page()">
+            <i class="fa"></i>&nbsp;发布
+        </button>
+@endsection
+<script>
+    var index_ajax_url = '{{URL::route('taskmanage.post')}}';
+    var index_ajax_token = '{{ csrf_token() }}';
+    var edit_url = '{{URL::route('taskmanage.edit')}}';
+    var delete_url = '{{URL::route('taskmanage.dele')}}';
+    var add_url = '{{URL::route('taskmanage.add')}}';
+    //定义要初始化的数据
+    function init_form(){
+        //所有表单初始化数据
+        var form_data = {};
+        form_data.platform = $('#form_platform').find("option:selected").val();
+        form_data.giveperson = $('#giveperson').find("option:selected").val();
+        form_data.toperson = $('#toperson').find("option:selected").val();
+        form_data.mathStart = $('#mathStart').val();
+        form_data.mathEnd = $('#mathEnd').val();
+        form_data.status = $('#status').find("option:selected").val();
+        form_data.title = $('#title').val();
+        form_data._token = index_ajax_token;
+        return form_data;
+    };
+    
+    //提交，这一部分要区分是哪一个任务
+    function post_form(){
+        $('#datatable1').DataTable({//有用代码
+            'language': {  
+                'emptyTable': '没有数据',  
+                'loadingRecords': '加载中...',  
+                'processing': '查询中...',  
+                'search': '检索:',  
+                'lengthMenu': '每页 _MENU_ 条',  
+                'zeroRecords': '没有数据',  
+                'paginate': {  
+                    'first':      '第一页',  
+                    'last':       '最后一页',  
+                    'next':       '>>',  
+                    'previous':   '<<'  
+                },  
+                'info': '第 _PAGE_ 页 / 总 _PAGES_ 页',  
+                'infoEmpty': '没有数据',  
+                'infoFiltered': '(过滤总件数 _MAX_ 条)'  
+            },
+            "processing": true,
+            "serverSide": true,
+            "destroy": true,
+            ajax: {
+               "url": index_ajax_url,
+               "type": 'post',
+               //"columnDefs": [{"targets": 0,"data": null,"defaultContent": "<button>Select Image ID</button>"} ],
+               "data":init_form()
+             }
+       }); 
+    };
+    
+    
+    function show_task_progress(task_id,obj){
+        $.ajax({
+             url:'{{URL::route('taskmanage.ajax')}}',
+             type:"post",
+             dataType:'html',
+             data:{'task_id':task_id,'_token':index_ajax_token},
+             success:function(data){
+                 $('#modal').html(''); 
+                 $('#modal').html(data);//显示数据
+                 $('#modal').modal('show');
+            }
+        });
+    };
+    
+    
+    function showtask(task_id){
+        $.ajax({
+             url:'showtask',
+             type:"post",
+             dataType:'html',
+             data:{'id':task_id,'_token':index_ajax_token},
+             success:function(data){
+                 $('#modal').html(''); 
+                 $('#modal').html(data);//显示数据
+                 $('#modal').modal('show');
+            }
+        });
+    };
+    
+    
+    function fastedit(id,obj){
+        //创建input 放入数字 失焦修改,读取前面
+       var num =  $(obj).prev().html();
+       $(obj).prev().remove(); 
+       var input =  $("<input type='text' name='rankids[]' value='"+num+"' />");
+       $(obj).before(input);
+       input.focus();
+       input.blur(function(){
+          var after = input.val();
+          $.ajax({
+             url:'updaterank',
+             type:"post",
+             dataType:'json',
+             data:{'id':id,'rank':after,'_token':index_ajax_token},
+             success:function(data){
+                 input.remove();
+                 if(data.error){
+                    $(obj).before("<span>"+num+"</span>");
+                    alert(data.msg);//后面调整
+                 }else{//成功
+                    $(obj).before("<span>"+after+"</span>");
+                    alert(data.msg);//后面调整
+                 }
+             }
+          });
+       }); 
+       
+
+//        $.ajax({
+//             url:'updateRank',
+//             type:"post",
+//             dataType:'html',
+//             data:{'id':task_id,'_token':index_ajax_token},
+//             success:function(data){
+//                 $('#modal').html(''); 
+//                 $('#modal').html(data);//显示数据
+//                 $('#modal').modal('show');
+//            }
+//        });
+        
+    }
+    
+    
+    
+    
+</script>
+@section('table')
+<!-- DATA TABLES -->
+<div class="row">
+    <div class="col-md-12">
+        <!-- BOX -->
+        <div class="box border">
+            <div class="box-title">
+                <h5 style="color: #000;"><i class="fa fa-table"></i>@yield('title')表</h5>
+                <div class="tools hidden-xs">
+                    <a href="javascript:;" class="reload">
+                        <i class="fa fa-refresh"></i>
+                    </a>
+                    <a href="javascript:;" class="collapse">
+                        <i class="fa fa-chevron-up"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="box-body">
+                <table id="datatable1"  style="font-size: 13px;" cellpadding="0" cellspacing="0" border="0" class="datatable table table-striped table-bordered table-hover">
+                    <thead  style="font-size: 13px;">
+                            <tr>
+                                @foreach($thead as $i =>$row)
+                                    <th>{{ $row }}</th>
+                                @endforeach
+                            </tr>
+                    </thead>
+                </table>
+            </div>
+            <input type="hidden" id="hide_op_id"  /><!-- 重要用于操作的主键  -->
+        </div>
+        <!-- /BOX -->
+    </div>
+</div>
+{{--<a href="#" rel="drevil">--}}
+    {{--<span class="glyphicon glyphicon-shopping-cart"> </span> 分工部门--}}
+{{--</a>--}}
+
+
+<!-- /DATA TABLES -->
+@endsection
+<!-- 其他部分的自定义url -->
+@section('js')
+    @parent
+    @include('Admin.Layouts.myui')
+
+    <script charset="utf-8" src="{{ asset('assets/js/kindeditor/kindeditor-all-min.js') }}"></script>
+    <script charset="utf-8" src="{{ asset('assets/js/kindeditor/lang/zh-CN.js') }}"></script>
+    <script>
+        function manageopen(obj) {
+
+            var obj = $(obj)
+            obj.popover({
+                trigger:'manual',
+                placement : 'bottom',
+                title : '<div style="text-align:center; color:red; text-decoration:underline; font-size:14px;"> {{}}</div>',
+                html: 'true',
+                content : '<div id="popOverBox">113132</div>',
+                animation: false
+            }).on("mouseenter", function () {
+                obj.popover("show");
+                obj.siblings(".popover").on("mouseleave", function () {
+                    $(obj).popover('hide');
+                });
+            }).on("mouseleave", function () {
+                setTimeout(function () {
+                    if (!$(".popover:hover").length) {
+                        obj.popover("hide")
+                    }
+                }, 100);
+            });
+        }
+
+
+    </script>
+@endsection

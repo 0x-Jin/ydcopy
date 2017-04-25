@@ -1,0 +1,129 @@
+@extends('Admin.Layouts.master')
+@section('title', '快递跟踪')
+@section('breadcrumb')
+    <li>工作管理</li>
+    <li class="active">快递跟踪</li>
+@endsection
+
+@section('button')
+    <div class="form-group">
+        <a class="btn btn-warning btn-refresh mr10" href="javascript:;">
+            <i class="fa fa-refresh"></i>&nbsp;刷新
+        </a>
+    </div>
+    <div class="form-group pull-right">
+        <label class="control-label">TradeId：</label>
+        {{ Form::input('text', 'TradeId', '', ['class'=>'form-control mr10', 'placeholder'=>'TradeId', 'style'=>'width:150px;']) }}
+        <label class="control-label">店铺：</label>
+        {{ Form::input('text', 'ShopName', '', ['class'=>'form-control mr10', 'placeholder'=>'店铺', 'style'=>'width:150px;']) }}
+        <a class="btn btn-success btn-search" href="javascript:;">
+            <i class="fa fa-search"></i>&nbsp;搜索
+        </a>
+    </div>
+@endsection
+
+@section('table')
+    <div class="row col-md-12">
+        <div class="box">
+            <table id="table"></table>
+        </div>
+    </div>
+@endsection
+
+@section('js')
+    @parent
+    <script>
+        $(function(){
+            $('.btn-refresh').one('click', refreshFunc = function(){
+                $('#table').bootstrapTable('refresh');
+                $(this).one('click', refreshFunc);
+            }) ;
+
+            $('#table').bootstrapTable({
+                url: g.current_path,
+                method: 'post',
+                queryParamsType: 'limit',
+                queryParams: function(params){
+                    params._token = g._token;
+                    params.bn = $('input[name=bn]').val();
+                    params.principal= $('input[name=principal]').val();
+                    return params;
+                },
+                striped: true,
+                uniqueId: 'id',
+                pagination: true,
+                sidePagination: 'server',
+                detailView: true,
+                onExpandRow: function(index, row, $detail){
+                    if(row.express_log){
+                        return $detail.html(row.express_log);
+                    } else {
+                        $.post(
+                            '{{ url('task/express/log') }}',
+                            { _token: g._token, ExpressNameActual: row.ExpressNameActual, ExpressNumber: row.ExpressNumber },
+                            function(data){
+                                row.express_log = data;
+                                $('#table').bootstrapTable('updateRow', index, row);
+                                return $detail.html(data);
+                            }
+                        );
+                    }
+                },
+                columns: [{
+                    field: 'id',
+                    title: 'id'
+                }, {
+                    field: 'OdCode',
+                    title: 'OdCode'
+                }, {
+                    field: 'TradeId',
+                    title: 'TradeId'
+                }, {
+                    field: 'ExpressNameActual',
+                    title: '公司'
+                }, {
+                    field: 'ExpressNumber',
+                    title: '单号'
+                }, {
+                    field: 'ShopName',
+                    title: '店铺'
+                }, {
+                    field: 'PayTime',
+                    title: 'PayTime'
+                }, {
+                    field: 'DeliveryDate',
+                    title: 'DeliveryDate'
+                }, {
+                    field: 'status',
+                    title: 'status'
+                }, {
+                    field: 'created_at',
+                    title: '添加时间',
+                    formatter: function(val, row, index){
+                        var objDate = new Date(val*1000);
+                        return objDate.getFullYear()+"-"+(objDate.getMonth()+1)+"-"+objDate.getDate();
+                    }
+                }]
+            });
+
+            $('#table tbody').on('click', '.btn-edit', function(){
+                $('#table').bootstrapTable('expandRow', 1);
+            });
+
+            $('.btn-search').one('click', searchFunc=function(){
+                $('#table').bootstrapTable('refresh',
+                    {
+                        query:{
+                            TradeId:$('input[name=TradeId]').val(),
+                            ShopName: $('input[name=ShopName]').val(),
+                            offset: 0
+                        }
+                    }
+                );
+                $(this).one('click', searchFunc);
+            });
+        });
+    </script>
+
+
+@endsection

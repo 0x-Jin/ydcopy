@@ -1,0 +1,58 @@
+<!-- DATA TABLES -->
+<div class="row">
+    <div class="col-md-12">
+        <!-- BOX -->
+        <div class="box border">
+            <div class="box-title">
+                <h4><i class="fa fa-table"></i>@yield('title')表</h4>
+                <div class="tools hidden-xs">
+                    <a href="javascript:;" class="reload">
+                        <i class="fa fa-refresh"></i>
+                    </a>
+                    <a href="javascript:;" class="collapse">
+                        <i class="fa fa-chevron-up"></i>
+                    </a>
+                </div>
+            </div>
+            @if($l = count($table))
+            <div class="box-body">
+                <table id="datatable1" cellpadding="0" cellspacing="0" border="0" class="datatable table table-striped table-bordered table-hover">
+                    @foreach($table as $i =>$row)
+                        @if(is_array($row))
+                            @if($i == 0)
+                                <?php $keys = array_keys( (array)$row);?>
+                                <thead>
+                                    <tr>
+                                        @foreach($keys as $key)
+                                            <th>{{ $key }}</th>
+                                        @endforeach
+                                    </tr>
+                                </thead>
+                            @endif
+                            @if(isset($extra['showTbFoot']) && $i == $l-1)
+                                <tfoot>
+                                    <tr>
+                                        @foreach($keys as $key)
+                                            <td>{{ $row[$key] }}</td>
+                                        @endforeach
+                                    </tr>
+                                </tfoot>
+                            @else
+                                <tbody>
+                                    <tr>
+                                    @foreach($keys as $key)
+                                        <td>{{ $row[$key] }}</td>
+                                    @endforeach
+                                    </tr>
+                                </tbody>
+                            @endif
+                        @endif
+                    @endforeach
+                </table>
+            </div>
+            @endif
+        </div>
+        <!-- /BOX -->
+    </div>
+</div>
+<!-- /DATA TABLES -->

@@ -1,0 +1,45 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Task;
+
+use App\Http\Controllers\Controller;
+use DB;
+
+class ExpressController extends Controller {
+
+
+    public function __construct(){
+        parent::__construct();
+    }
+
+    public function post(){
+        if($this->req->has('platForm') && $this->req->platForm != '全部') $this->mdl = $this->mdl->where('ShopName', $this->req->platForm);
+        if($this->req->has('ExpressNumber')) $this->mdl = $this->mdl->where('ExpressNumber', $this->req->ExpressNumber);
+
+        if($this->req->status == '5') {
+            $this->mdl = $this->mdl->where('status', '>', 0);
+        } elseif ($this->req->status != '-1'){
+            $this->mdl = $this->mdl->where('status', $this->req->status);
+        }
+        if($this->req->has('deliveryStart')) $this->mdl = $this->mdl->where('deliveryDate', '>=', $this->req->deliveryStart);
+        if($this->req->has('deliveryEnd')) $this->mdl = $this->mdl->where('deliveryDate', '<=', $this->req->deliveryEnd);
+        if($this->req->has('updatedStart')) $this->mdl = $this->mdl->where('updated_at', '>=', strtotime($this->req->updatedStart));
+        if($this->req->has('updatedEnd')) $this->mdl = $this->mdl->where('updated_at', '<=', strtotime($this->req->updatedEnd));
+        if($this->req->isError) $this->mdl = $this->mdl->where('express_trace', null);
+
+        $data = [
+                    "total" => $this->mdl->count(),
+                    "rows"  => $this->mdl->offset($this->req->offset)->limit($this->req->limit)->get()
+                ];
+        return response()->json($data);
+    }
+
+    public function trace(){
+        if($this->req->has('ExpressNumber')){
+            $rt = $this->mdl->trace($this->req->ExpressNumber);
+        } else {
+            $rt = ['status'=>0, 'msg'=>'请输入单号'];
+        }
+        return response()->json($rt);
+    }
+}

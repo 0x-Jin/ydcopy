@@ -1,0 +1,32 @@
+@extends('Admin.Layouts.master')
+@section('title', '店铺分类销售')
+@section('breadcrumb')
+    <li>店铺</li>
+    <li class="active">分类销售</li>
+@endsection
+
+@section('inputs')
+    <div class="plat-form">
+        @include('Admin.Plat.inputs')
+        <div class="form-group">
+            <label class="control-label">{{ Config::get('self.select.platForms.label') }}：</label>
+            {{ Form::select('platForm', Config::get('self.select.platForms.opts'), old('platForm'), ['class'=>'form-control', 'tabindex'=>'-1', 'aria-hidden'=>'true']) }}
+        </div>
+
+        <div class="form-group">
+            <label class="control-label">{{ Config::get('self.select.orderType.label') }}：</label>
+            {{ Form::select('orderType', Config::get('self.select.orderType.opts'), old('orderType'), ['class'=>'form-control', 'tabindex'=>'-1', 'aria-hidden'=>'true']) }}
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox inline">
+                {{ Form::checkbox('isObSolete', 1, old('isObSolete')) }}包含取消交易订单
+            </label>
+        </div>
+        <div class="form-group">
+            <label class="checkbox inline">
+                {{ Form::checkbox('isDeleted', 1, old('isDeleted')) }}包含行销
+            </label>
+        </div>
+    </div>
+@endsection

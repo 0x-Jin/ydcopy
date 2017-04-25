@@ -1,0 +1,102 @@
+<?php
+namespace APP\Api;
+
+class Kdniao {
+
+    protected $EBusinessID = '1256799';
+    protected $AppKey = '7982943a-9bb1-4e6d-9c6e-a5e1042290bc';
+    protected $ReqURL = 'http://api.kdniao.cc/Ebusiness/EbusinessOrderHandle.aspx';
+
+    public function __constuct(){
+        $this->EBusinessID = config('kdniao.EBusinessID');
+        $this->AppKey = config('kdniao.AppKey');
+        $this->ReqURL = config('kdniao.ReqURL');
+    }
+
+
+    /**
+     * 实时查询物流
+     * @param $shipperCode  物流单号
+     * @param $logisticCode 物流编号
+     * @return url响应返回的html
+     */
+    public function search($shipperCode, $logisticCode){
+        $requestData= "{\"OrderCode\":\"\",\"ShipperCode\":\"".$shipperCode."\",\"LogisticCode\":\"".$logisticCode."\"}";
+        $datas = [
+            'EBusinessID' => $this->EBusinessID,
+            'RequestType' => '1002',
+            'RequestData' => urlencode($requestData) ,
+            'DataType' => '2',
+            'DataSign' => $this->encrypt($requestData, $this->AppKey),
+        ];
+        $result=$this->sendPost($this->ReqURL, $datas);
+        //根据公司业务处理返回的信息......
+        return $result;
+    }
+
+    /**
+     * 订阅物流，跟踪物流
+     * @return url响应返回的html
+     */
+    public function subscribe($requestData){
+        $datas = array(
+            'EBusinessID' => $this->EBusinessID,
+            'RequestType' => '1005',
+            'RequestData' => urlencode($requestData) ,
+            'DataType' => '2',
+        );
+        $datas['DataSign'] = $this->encrypt($requestData, $this->AppKey);
+        $result = $this->sendPost($this->ReqURL, $datas);
+        //根据公司业务处理返回的信息......
+        return $result;
+    }
+
+
+
+    /**
+     *  post提交数据
+     * @param  string $url 请求Url
+     * @param  array $datas 提交的数据
+     * @return url响应返回的html
+     */
+    protected function sendPost($url, $datas) {
+        $temps = array();
+        foreach ($datas as $key => $value) {
+            $temps[] = sprintf('%s=%s', $key, $value);
+        }
+        $post_data = implode('&', $temps);
+        $url_info = parse_url($url);
+        $httpheader = "POST " . $url_info['path'] . " HTTP/1.0\r\n";
+        $httpheader.= "Host:" . $url_info['host'] . "\r\n";
+        $httpheader.= "Content-Type:application/x-www-form-urlencoded\r\n";
+        $httpheader.= "Content-Length:" . strlen($post_data) . "\r\n";
+        $httpheader.= "Connection:close\r\n\r\n";
+        $httpheader.= $post_data;
+        $fd = fsockopen($url_info['host'], 80);
+        fwrite($fd, $httpheader);
+        $gets = "";
+        $headerFlag = true;
+        while (!feof($fd)) {
+            if (($header = @fgets($fd)) && ($header == "\r\n" || $header == "\n")) {
+                break;
+            }
+        }
+        while (!feof($fd)) {
+            $gets.= fread($fd, 128);
+        }
+        fclose($fd);
+
+        return $gets;
+    }
+
+    /**
+     * 电商Sign签名生成
+     * @param data 内容
+     * @param appkey Appkey
+     * @return DataSign签名
+     */
+    protected function encrypt($data, $appkey) {
+        return urlencode(base64_encode(md5($data.$appkey)));
+    }
+
+}

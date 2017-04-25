@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Goods;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\PageService\Admin\Goods\Rank as Model;
+
+
+class RankController extends Controller {
+    public function index(Request $request){
+        $request->session()->forget('file');
+        return view($this->getCutCtrlPath());
+    }
+
+    public function post(Request $request, Model $mdl){
+        $this->validate($request, [
+            'platForm'      => 'required',
+            'deliveryStart' => 'required|before:deliveryEnd',
+            'deliveryEnd'   => 'required|after:deliveryStart',
+        ], [
+            'deliveryStart.required' => '请输入起始时间',
+            'deliveryEnd.required'   => '请输入截止时间',
+        ]);
+
+        $from = $request->nocache ? 'db' : 'file';
+        $params = $request->except(['_token', 'nocache']);
+        $data = $params ? $mdl->getData($params, $from) : [];
+
+        $request->session()->set('file', $mdl->dataPath);
+        return response()->json($data);
+    }
+
+    public function export(Request $request, Model $mdl){
+        $file = $request->session()->get('file');
+        if( empty($file)){
+            return response()->json(['未知错误!']);
+        }
+        $path = sprintf('Cache/%s/Data/%s', $this->getCutCtrlPath('/'), $file);
+        $arrData = $mdl->_queryFile($path);
+
+        if(empty($arrData)){
+            return response()->json(['未知错误!']);
+        }
+        $mdl->export($path, $arrData);
+    }
+}

@@ -1,0 +1,29 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Task;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Models\Admin\Task\Express as Model;
+
+class ExpressController extends Controller {
+    public function index(){
+        return view($this->getCutCtrlPath());
+    }
+
+    public function post(Request $req, Model $mdl){
+        if($req->has('TradeId')) $mdl = $mdl->where('TradeId', $req->TradeId);
+        if($req->has('ShopName')) $mdl = $mdl->where('ShopName', $req->ShopName);
+        $data = [
+                    "total"=>$mdl->count(),
+                    "rows"=>$mdl->offset($req->offset)->limit($req->limit)->get()
+                ];
+        return response()->json($data);
+    }
+
+    public function trace(Request $req, Model $mdl){
+        $expressCompany = $req->ExpressNameActual == '圆通' ? 'YTO' : 'EMS';
+        $expressBn = $req->ExpressNumber;
+        echo $mdl->trace($expressCompany, $expressBn);
+    }
+}

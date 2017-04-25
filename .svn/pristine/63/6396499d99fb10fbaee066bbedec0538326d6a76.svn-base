@@ -1,0 +1,348 @@
+<?php
+
+//使用到两个数据库的配置：：
+
+namespace App\Http\Controllers\Admin\Task;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Input;
+use App\Http\Controllers\Controller;
+use App\Models\Admin\Tool\Shipment;
+use App\Models\Admin\Tool\Shipment_item;
+use DB;
+use URL;
+use App\Http\Requests\Tool\DamageRequest;
+
+
+class DamageController extends Controller {
+
+    private $to_map = array(
+        'reason'=>array(1=>'快递运输途中破损',2=>'快递运输途中丢件',3=>'仓库发货无物流信息',4=>'仓库错发',5=>'仓库少发',6=>'商品质量问题',7=>'运营问题',8=>'客服问题',9=>'其他(备注说明)'),
+        'person'=>array(1=>'圆通',2=>'中通',3=>'京东',4=>'顺丰',5=>'客服',6=>'仓库',7=>'运营',8=>'公司'),
+        'is_cod'=>array('否','是'),
+        'assumed_ratio'=>array('部分承担','全部承担'),
+    );
+    
+    
+    public function __construct() {
+        $this->return_url = URL::route('damage.index'); //当前的所有操作最终跳转的页面：    
+    }
+
+    
+    public function indexnew(Request $req){
+        $req->flashExcept('_token');
+        $thead = array(
+            'sp'=>'ShopName',
+            'title'=>'配货单号',
+            'realname'=>'客户姓名',
+            'tellphone'=>'客户电话',
+            'delivey_id'=>'快递单号',
+            'delivey_company'=>'快递公司',
+            'comments'=>'说明',
+            'assumed_ratio'=>'承担比例',
+            'assumed_sum'=>'承担金额',
+            'opeator_time'=>'制单时间',
+            'opeator'=>'制单人',
+            'pfzt'=>'配货状态',
+            'is_cod'=>'是否货到付款',
+            'cod_num'=>'货到付款单号',
+            'op'=>'操作'
+         );
+        $viewData = [
+            'extra' => [
+                'currentCtrl' => '',
+                'exportUrl' => '',
+            ],
+            'data' => [],
+            'thead'=>$thead
+        ];
+        return view('Admin/Tool/Damage',$viewData);
+    }
+    
+    public function postnew(Request $req) {
+        //定义要查询的字段
+        $select_cols = 'damage_id,shopname,shipment_id,customer,tellphone,delivery_id,delivery_company,comment,assumed_ratio,assumed_sum,opeator_time,opeator,shipment_status,is_cod,cod_num';
+        // platform: mathStart: mathEnd: reason:0 person:0 bn: _token:9tC8JbVM5oPUSXz0lrB6AWrf5JVFkTYSZblHfrmV
+        $reqData = $req->all();
+        if( isset($reqData['mathStart']) && isset($reqData['mathEnd']) && strtotime($reqData['mathEnd']) < strtotime($reqData['mathStart']) ){
+            $viewData = [
+                'draw'=>intval($reqData['draw']),
+                "recordsTotal"=>0,
+                "recordsFiltered"=>0,
+                'data' => []
+            ];
+            exit(json_encode($viewData));
+        }
+        $reqData['pageSize'] = isset($reqData['length'])?$reqData['length']:10;
+        $reqData['pageNo'] = isset($reqData['start'])?$reqData['start']:1;
+
+        if( !empty($reqData['reason']) || !empty($reqData['person']) || !empty($reqData['bn']) ){
+            
+            $detail_id = DB::table('damageitem')->select('damage_id')->distinct('damage_id')
+                        ->where(function($query) use($reqData){
+                            if(!empty($reqData['reason'])){//原因
+                                $query->where('reason',$reqData['reason']);
+                            }
+                        })
+                        ->where(function($query) use($reqData){
+                            if(!empty($reqData['person'])){//责任方
+                                $query->where('assumed_person',$reqData['person']);
+                            }
+                        })
+                        ->where(function($query) use($reqData){
+                            if(!empty($reqData['bn'])){//状态
+                                $query->where('bn',$reqData['bn']);
+                        }})
+                        ->orderBy('damage_id','desc')->get();
+            
+            foreach($detail_id as $v){
+                $damage_array[] = $v->damage_id;
+            }
+
+            $data_src = DB::table('damage')->select(\DB::raw("{$select_cols}"))->whereIn('damage_id', $damage_array)->orderBy('opeator_time','desc');
+            
+        }else{
+            $data_src = DB::table('damage')->select(\DB::raw("{$select_cols}"))
+            ->where(function($query) use($reqData){
+                    if(!empty($reqData['platform'])){//平台
+                        $query->where('shopname',$reqData['platform']);
+                    }
+            })
+            ->orderBy('opeator_time','desc');
+        }
+
+        $filterCount = $data_src->count();
+        
+        $data = $data_src->take($reqData['pageSize']>0?intval($reqData['pageSize']):10)
+                ->skip($reqData['pageNo'] > 1 ? $reqData['pageNo'] : 0)
+                ->get();
+        
+        $newArray = [];
+        
+        foreach($data as $item){
+           $item->is_cod = $this->to_map['is_cod'][$item->is_cod];
+           $item->opeator_time = date('Y-m-d H:i:s',$item->opeator_time);
+           $item->assumed_ratio = $this->to_map['assumed_ratio'][$item->assumed_ratio];
+           $item = $this->object_to_array($item);
+           $string = "<a href='javascript:update({$item[0]})' class='btn btn-xs btn-info btn-edit mr10'><i class='fa fa-pencil-square-o'></i>编辑</a><a  href='javascript:dele({$item[0]})' class='btn btn-xs btn-warning btn-del' ><i class='fa fa-trash-o'></i>删除</a><a  href='' class='btn btn-xs btn-warning btn-del' ><i class='fa fa-trash-o'></i>打印</a>";
+           array_splice($item, 0, 1);
+           array_push($item,$string);
+           $newArray[] = $item;
+        }
+        
+        $recordsTotal = DB::table('damage')->count();
+        
+        $viewData = [
+            'draw'=>intval($reqData['draw']),
+            "recordsTotal"=>$recordsTotal,
+            "recordsFiltered"=>$filterCount,
+            'data' => $newArray
+        ];
+        echo json_encode($viewData);
+    }
+    
+    private function object_to_array($obj) {
+        $_arr = is_object($obj) ? get_object_vars($obj) : $obj;
+        foreach ($_arr as $key => $val) {
+            $val = (is_array($val) || is_object($val)) ? object_to_array($val) : $val;
+            $arr[] = $val;
+        }
+        return $arr;
+    }
+    
+    //添加部分 主题逻辑部分:
+    public function add(){
+        return view('Admin\Tool\addDamage');
+    }
+    
+    public function doadd(DamageRequest $req){
+        
+        $reqData = $req->all();
+        
+        if(!$reqData['good_name']){
+           return view('Admin/Common/Message', ['title' => '操作提示', 'url' => $this->return_url, 'message' => '商品信息不能为空']); 
+        }
+        //通过入库:
+        $maindata = array(
+            'shipment_id'=>trim($reqData['shipmentno']),
+            'opeator_time'=>time(),
+            'opeator'=>$req->user()->code,
+            'trade_id'=>$reqData['trade_id'],
+            'customer'=>$reqData['customer'],
+            'tellphone'=>$reqData['tellphone'],
+            'address'=>$reqData['address'],
+            'delivery_company'=>$reqData['delivery_company'],
+            'delivery_id'=>$reqData['delivery_id'],
+            'assumed_ratio'=>$reqData['assumed_ratio'],
+            'assumed_sum'=>$reqData['assumed_sum'],
+            'comment'=>$reqData['comment'],
+            'shopname'=>$reqData['shopname'],
+            'is_cod'=>$reqData['is_cod'],
+            'cod_num'=>$reqData['cod_num'],
+            'shipment_status'=>$reqData['shipment_status']
+        );
+        
+        $insert_id = DB::table('damage')->insertGetId($maindata);
+        foreach($reqData['good_bn'] as $k=>$v){
+            $detail_data = array(
+                'damage_id'=>$insert_id,
+                'good_bn'=>$v,
+                'spec_bn'=>$reqData['spec_bn'][$k],
+                'good_name'=>$reqData['good_name'][$k],//number
+                'number'=>$reqData['number'][$k],
+                'sale_price'=>$reqData['sale_price'][$k],
+                'is_return'=>$reqData['is_return'][$k],
+                'reason'=>$reqData['reason'][$k],
+                'assumed_person'=>$reqData['assumed_person'][$k]
+            );
+            DB::table('damageitem')->insertGetId($detail_data);
+        }
+        return view('Admin/Common/Message', ['title' => '操作提示', 'url' => $this->return_url, 'message' => '添加成功']);
+    }
+    
+    //删除数据
+    public function deletenew(Request $req){
+         $reqData = $req->all();
+         $damage_id = intval($reqData['id']);
+         DB::table('damage')->where('damage_id',$damage_id)->delete();
+         DB::table('damageitem')->where('damage_id',$damage_id)->delete();
+         return view('Admin/Common/Message', ['title' => '操作提示', 'url' => $this->return_url, 'message' => '删除成功']);
+    }
+
+    public function importinfo(Request $req){
+        
+        $reqData = $req->all();
+        
+        $shipment_no =  $reqData['no'];
+        
+        if(!$shipment_no){
+            exit(json_encode( array('status'=>0,'msg'=>'错误的配货单号') ));
+        }
+   
+        $delivery_data = 
+                Shipment::select('ID','ShopName','Code','TradeId','ConsigneeName','ConsigneeAddress','ActuallyPaid','ExpressNameActual','ExpressNumber','IsCod','CodNo','ConsigneeTelephone','DispatchStatus','CodNo','IsCod')
+                ->where(['Code'=>$shipment_no])
+                ->get();
+        
+        if(!$delivery_data[0]){
+            exit( json_encode( array('status'=>0,'msg'=>'无此配货单号') ) );
+        }else{
+           switch($delivery_data[0]->DispatchStatus){
+               case 1:
+                   $delivery_data[0]->DispatchStatus = '新建';break;
+               case 3:
+                   $delivery_data[0]->DispatchStatus = '已受理';break;
+               case 7:
+                   $delivery_data[0]->DispatchStatus = '已发货';break;
+               default:
+                   $delivery_data[0]->DispatchStatus = '已取消';break;
+           }
+        }
+        
+        $delivery_data[0]->ConsigneeTelephone = $this->decodeTell($delivery_data[0]->ConsigneeTelephone);
+        
+        
+        $delivery_item_data = 
+                Shipment_item::select('ProductCode','ProductName','ProductSkuCode','DispatchQuantity','PriceSelling')
+                ->where(['DispatchProductOrderId'=>$delivery_data[0]->ID])
+                ->get();
+        
+        echo json_encode( array('status'=>1,'data'=>array( 'main'=> $delivery_data,'detail'=>$delivery_item_data )) );
+        
+    }
+    
+    private function decodeTell($number){
+        $realnumber = file_get_contents("http://192.168.228.189:8080/default.aspx?code=".$number);
+        return $realnumber;
+    }
+    
+    public function edit(Request $req){
+        
+        $id = $req->input('id', 1);
+        
+        $damage_main = DB::table('damage')->select("*")->where('damage_id',$id)->get();
+
+        $damage_detail = DB::table('damageitem')->select('*')->where('damage_id',$id)->get();
+        
+        return view('Admin\Tool\editDamage',['single' => $damage_main[0],'detail' => $damage_detail]);
+    }
+    
+    public function doedit(DamageRequest $req){
+        
+        $reqData = $req->all();
+        
+        if(!$reqData['good_name']){
+           return view('Admin/Common/Message', ['title' => '操作提示', 'url' => $this->return_url, 'message' => '商品信息不能为空']); 
+        }
+        
+        if($reqData['delivery_id'] == "null"){
+            $reqData['is_cod'] = 1;
+        }else{
+            $reqData['is_cod'] = 0;
+        }
+        
+        $main_data = array(
+            'shipment_id'=>trim($reqData['shipmentno']),
+            'shopname'=>$reqData['shopname'],
+            'trade_id'=>$reqData['trade_id'],
+            'modify_time'=>time(),
+            'customer'=>$reqData['customer'],
+            'tellphone'=>$reqData['tellphone'],
+            'address'=>$reqData['address'],
+            'delivery_company'=>$reqData['delivery_company'],
+            'delivery_id'=>$reqData['delivery_id'],
+            'is_cod'=>$reqData['is_cod'],
+            'assumed_ratio'=>$reqData['assumed_ratio'],
+            'assumed_sum'=>$reqData['assumed_sum'],
+            'comment'=>$reqData['comment'],
+            'is_cod'=>$reqData['is_cod'],
+            'cod_num'=>$reqData['cod_num'],
+            'shipment_status'=>$reqData['shipment_status']
+        );
+        
+        DB::table('damage')->where('damage_id', $reqData['damage_id'])->update( $main_data );
+        
+        //删除附表数据重新插入
+        DB::table("damageitem")->where('damage_id', $reqData['damage_id'])->delete();
+        
+        if($reqData['good_bn']['update']){
+            foreach($reqData['good_bn'] as $k=>$v){
+                if($k == 'update'){//更新
+                   foreach($reqData['good_bn']['update'] as $pk=>$vv){
+                       $update_data = array(
+                           'good_bn'=>$reqData['good_bn']['update'][$pk],
+                           'spec_bn'=>$reqData['spec_bn']['update'][$pk],
+                           'good_name'=>$reqData['good_name']['update'][$pk],
+                           'number'=>$reqData['number']['update'][$pk],
+                           'sale_price'=>$reqData['sale_price']['update'][$pk],
+                           'is_return'=>$reqData['is_return']['update'][$pk],
+                           'reason'=>$reqData['reason']['update'][$pk],
+                           'assumed_person'=>$reqData['assumed_person']['update'][$pk],
+                           'damage_id'=>$reqData['damage_id']
+                       );
+                       DB::table('damageitem')->insert( $update_data );
+                   }
+                }else{//添加
+                    $add_data = array(
+                        'good_bn'=>$reqData['good_bn'][$k],
+                        'spec_bn'=>$reqData['spec_bn'][$k],
+                        'good_name'=>$reqData['good_name'][$k],
+                        'number'=>$reqData['number']['update'][$k],
+                        'sale_price'=>$reqData['sale_price'][$k],
+                        'is_return'=>$reqData['is_return'][$k],
+                        'reason'=>$reqData['reason'][$k],
+                        'assumed_person'=>$reqData['assumed_person'][$k],
+                    );
+                    DB::table('damageitem')->insert($add_data);
+                }
+            }
+        }
+        
+        return view('Admin/Common/Message', ['title' => '操作提示', 'url' => $this->return_url, 'message' => '修改成功']);
+        
+        
+        
+        
+        
+    }
+    
+}

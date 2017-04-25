@@ -1,0 +1,76 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use Excel;
+use App\Models\Admin\Goods\Limit as Model;
+use Log;
+
+class ImportGoodsLimit extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'import:goods_limit {file} {bn} {category} {kind} {remark}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'import goods principals';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle(Model $mdl){
+        logger("artisan {$this->signature} stared", []);
+
+        $args = $this->argument();
+        $path = sprintf('%s/app/public/excel/%s', storage_path(), $args['file']);
+        $range = array_flip(range('A', 'Z'));
+
+        $excelData = Excel::load($path)->getSheet(0)->toArray();
+        array_shift($excelData);
+
+        $this->output->progressStart(count($excelData));
+        foreach($excelData as $i=>$row){
+            if( empty($row[$range[$args['bn']]])) continue;
+
+
+            $saveData = [
+                'bn'     => $row[$range[$args['bn']]],
+                'category' => $row[$range[$args['category']]] ?: '',
+                'kind'   => $row[$range[$args['kind']]] ?: '',
+                'remark' => $row[$range[$args['remark']]] ?: ''
+            ];
+            $bool = $mdl->create($saveData);
+            if($bool){
+                $str = json_encode($saveData).'insert success!';
+                Log::info($str);
+            } else {
+                $str = json_encode($saveData).'insert failed!';
+                Log::error($str);
+            }
+            $this->output->progressAdvance();
+        }
+        $this->output->progressFinish();
+
+        logger("artisan {$this->signature} finished", []);
+    }
+}

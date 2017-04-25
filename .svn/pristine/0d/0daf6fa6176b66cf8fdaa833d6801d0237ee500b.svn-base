@@ -1,0 +1,178 @@
+<div class="modal-dialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">工作管理>任务管理>任务编辑</h4>
+        </div>
+        <div class="modal-body">
+            {!! Form::open(array('url'=>'task/doaddmanage','class'=>'form-horizontal','id'=>'interviewForm')) !!}
+            <!--  发起人级别开始 --->
+            <div>
+                <table class='table'>          
+                    <tr>
+                        <td rowspan="2">发起人</td>
+                        <td>部门</td><td>员工</td><td>期望时间</td><td>操作日期</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            @if($current['write'])
+                               {!! Form::text('current[current_department]',$current['data']['current_department'] , ['class' => 'form-control ']) !!}
+                            @else
+                               {{$current['data']['current_department']}} 
+                            @endif
+                        </td>
+                        <td>
+                            @if($current['write'])
+                             {!! Form::text('current[currentone]',$current['data']['currentone'], ['class' => 'form-control datepicker hasDatepicker']) !!}
+                            @else
+                             {{$current['data']['currentone']}}
+                            @endif
+                        </td>
+                        <td>
+                            @if($current['write'])
+                              {!! Form::text('current[expire_time]', date('Y-m-d',$current['data']['expired_time']), ['class' => 'form-control datepicker']) !!}
+                            @else
+                              {{date('Y-m-d',$current['data']['expired_time'])}}
+                            @endif
+                        </td>
+                        <td>
+                            {!! Form::text('op_date', null, ['class' => 'form-control datepicker']) !!}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div>
+                <table class='table'>
+                    <tr>
+                        <td rowspan="3">详情</td>
+                        <td>标题</td>
+                        <td>
+                            @if($current['write'])
+                            {!! Form::text('current[title]', $current['data']['title'], ['class' => 'form-control']) !!}
+                            @else
+                               {{$current['data']['title']}}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>描述</td>
+                        <td>
+                            @if($current['remark'])
+                               {!! Form::textarea('current[remark]', $current['data']['remark'], ['class' => 'form-control']) !!}
+                            @else
+                               {{$current['data']['remark']}}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>附件</td>
+                        <td>
+                            <!--  有附件直接显示  这部门不需要再次上传附件了  -->
+                            @if($current['write']) 
+                            <span class="btn btn-success fileinput-button" id='fileupload'>
+                                <i class="glyphicon glyphicon-plus"></i>
+                                <span>上传附件</span>
+                                <input type="file" name="files" multiple>
+                            </span>
+                            <table id='addons_list'>
+                            </table>
+                            @endif
+                            <table>
+                                @foreach($current['data']['addons'] as $v)
+                                <tr>
+                                    <td> @if($current['write'])<input name='current[addons][]' value='{{$v}}'/>@endif {{$v}}</td>
+                                </tr>
+                                @endforeach
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <!-- 发起人级别结束 -->
+ 
+            
+            
+            <!-- 下一级处理  -->
+            <div>
+                <table class='table'>
+                    <tr>
+                        <td rowspan="2">接收人</td>
+                        <td>部门</td>
+                        <td>员工</td>
+                        <td>预计完成时间</td>
+                        <td>操作时间</td>
+                    </tr>
+                    <tr>
+                        <td>{{$next['data']['currentone']}}</td>
+                        <td>{{$next['data']['current_department']}}</td>
+                        <td>{{$next['data']['expired_time']}}</td>
+                        <td></td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div>
+                <!-- 全部不可修改 -->
+                <table class='table'>
+                    <tr>
+                        <td  rowspan="3">详情</td>
+                        <td>备注</td>
+                        <td>{{$next['data']['remark']}}</td>
+                    </tr>
+                    <tr>
+                        <td>附件</td>
+                        <!-- 直接显示  -->
+                        <td>
+                            <table>
+                                @foreach($current['data']['addons'] as $v)
+                                <tr>
+                                    <td>{{$v}}</td>
+                                </tr>
+                                @endforeach
+                            </table>
+                        </td>
+                        <!-- 直接显示  -->
+                    </tr>
+                    <tr>
+                        <td>优先级</td>
+                        <td>{{$next['data']['rank']}}</td>
+                    </tr>
+                </table>
+            </div>
+            <!-- 下一级处理结束  -->
+
+            <div class="form-group" >
+                <div  style='text-align:center'>
+                    {!! Form::submit('提交', ['class' => 'btn btn-default','id'=>'pass']) !!}
+                </div>
+            </div>
+            {!! Form::close() !!}
+        </div>
+    </div>
+</div>
+<script src="{{ asset('assets/js/jquery-upload/js/vendor/jquery.ui.widget.js') }}"></script>
+<script src="{{ asset('assets/js/jquery-upload/js/jquery.fileupload.min.js') }}"></script>
+<script>
+   $(function(){
+         //所有的日期初始化部分
+         $(".datepicker").datepicker();
+         
+         
+         //准备上传部分-
+         $("#fileupload").fileupload({  
+            url: 'upload',  
+            formData:{_token:index_ajax_token},
+            sequentialUploads: true,
+            done: function (e, data) {
+                if(data.result.error){
+                    alert(data.result.msg);
+                }else{
+                    $('#addons_list').append("<tr><td><input type='hidden' name='current[addons][]' value='"+data.result.msg+"'>"+data.result.short+"</td></tr>");
+                }
+            }
+           
+        });
+        
+        
+   });
+   
+</script>

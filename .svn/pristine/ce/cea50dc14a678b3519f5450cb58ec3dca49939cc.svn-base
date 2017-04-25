@@ -1,0 +1,93 @@
+<?php
+namespace App\Models\Admin\Plat;
+
+use App\Models\Admin\ModelWithoutMysql;
+
+class Cat extends ModelWithoutMysql {
+
+
+    protected  function _genSql($params){
+        $recordWhere = $createWhere = $platWhere = $deliverWhere = $payWhere = '';
+
+        if(!empty($params['recordEnd']) ){
+            $recordWhere = sprintf("and b.recordDate between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['recordStart'], $params['recordEnd']);
+        }
+
+        if( !empty($params['createEnd']) ) {
+            $createWhere = sprintf("and b.CREATEDATE between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['createStart'], $params['createEnd']);
+        }
+
+        if( !empty($params['platEnd']) ) {
+            $platWhere = sprintf("and b.PLATDELIVERYDATE between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['platStart'], $params['platEnd']);
+        }
+
+        if( !empty($params['deliverEnd']) ) {
+            $deliverWhere = sprintf("and b.DELIVERYDATE between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['deliverStart'], $params['deliverEnd']);
+        }
+
+        if( !empty($params['payEnd']) ) {
+            $payWhere = sprintf("and b.PayDate between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['payStart'], $params['payEnd']);
+        }
+
+        $platFormWhere   = empty($params['platForm'])   ? '' : "And b.Store_code_id = '{$params['platForm']}'";
+        $transTypeWhere  = $params['orderType'] ? 'and b.transType = '.($params['orderType']-1) : '';
+        $isObSoleteWhere = empty($params['isObSolete']) ? 'And b.isObSolete = 0' : "";
+        $isDeletedWhere  = empty($params['isDeleted'])  ? 'And a.isDeleted = 0' : "";
+
+        return "
+        --商品分类销售统计
+--查询条件：店铺名、记录时间、制单时间、平台发货时间、WMS发货时间、支付时间、是否包含取消交易订单
+select
+	s.分类1,s.分类2,s.分类3,
+	SUM(s.商品总数量) as 销售数量,
+	SUM(s.商品总金额) as 销售金额,
+	SUM(s.商品实际总金额) as 实际销售总金额,
+	SUM(s.均价成本总额) as 均价成本总额,
+	SUM(s.商品总金额)-SUM(s.均价成本总额) as 总毛利额,
+	SUM(s.商品实际总金额)-SUM(s.均价成本总额) as 实际毛利额
+from
+(
+	select
+		x.*,
+		y.CostPrice as 当前成本价,
+		u1.Code+' '+u1.Description as 分类1,
+		u2.Code+' '+u2.Description as 分类2,
+		u3.Code+' '+u3.Description as 分类3,
+		u4.Code+' '+u4.Description as 分类4
+	from
+	(
+		select
+			a.SkuCode,
+			SUM(a.Quantity) as 商品总数量,
+			SUM(a.Amount) as 商品总金额,
+			SUM(a.AmountActual) as 商品实际总金额,
+			sum(a.Quantity*a.FirstCost)/SUM(a.Quantity) as 平均成本价,
+			SUM(a.Quantity)*(sum(a.Quantity*a.FirstCost)/SUM(a.Quantity)) as 均价成本总额
+		from SalesOrderLine a with(nolock)
+			left join SalesOrder b with(nolock) on a.SalesOrderHeaderId=b.Order_ID
+		where
+		    1 = 1 {$isDeletedWhere} {$transTypeWhere} {$platFormWhere} {$isObSoleteWhere} {$recordWhere} {$createWhere} {$platWhere} {$deliverWhere} {$payWhere}
+		group by a.SkuCode
+	) x
+		left join Product_Sku y with(nolock) on x.SkuCode=y.Code
+		left join Product z with(nolock) on z.Product_Id=y.Product_Id
+		left join Product_Category u1 with(nolock) on u1.Category_Id=z.Category1_Id
+		left join Product_Category u2 with(nolock) on u2.Category_Id=z.Category2_Id
+		left join Product_Category u3 with(nolock) on u3.Category_Id=z.Category3_Id
+		left join Product_Category u4 with(nolock) on u4.Category_Id=z.Category4_Id
+) s
+group by s.分类1,s.分类2,s.分类3,s.分类4
+order by s.分类1,s.分类2,s.分类3,s.分类4 asc";
+    }
+
+    protected function _fmtData($rawData){
+        foreach($rawData as &$row){
+            $row['分类1'] = trim($row['分类1']) == '' ? '全部分类' : ( trim($row['分类1']) == '000' ?  '未知分类' : $row['分类1'] );
+            $row['分类2'] = trim($row['分类2']) == '000' ? '' : $row['分类2'];
+            $row['分类3'] = trim($row['分类3']) == '000' ? '' : $row['分类3'];
+//            $row['分类4'] = trim($row['分类4']) == '000' ? '' : $row['分类4'];
+        }
+        unset($row);
+        return $rawData;
+    }
+}

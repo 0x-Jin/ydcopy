@@ -1,0 +1,108 @@
+<div class="modal-dialog" style="width: 1700px;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">工具管理>破损登记>添加破损</h4>
+        </div>
+        <div class="modal-body">
+            <div class="main" style="border-top: none;">
+                {{--{!! Form::open(array('url'=>'','class'=>'form-horizontal','id'=>'interviewForm')) !!}--}}
+                {!! Form::open(['url'=>'','class'=>'form-horizontal','id'=>'interviewForm']) !!}
+                <input type='hidden' name='is_cod' id='is_cod' />
+                <input type='hidden' name='cod_num' id='cod_num' />
+                <input type='hidden' name='shipment_status' id='shipment_status' />
+
+                <div class="form-group">
+                    <label for="title" class=" col-md-1">配货单:</label>
+                    <label for="title" class="control-label col-md-3" style="padding:0 10px 0 0;">
+                        <input type="text" id="shipmentno" name="shipmentno" class="form-control"  />
+                        <span class="error-span"></span>
+                    </label>
+                    <button type='button' class="btn" id="importbtn">
+                          <i class="fa"></i>&nbsp;导入配货单信息
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label for="title" class=" col-md-1">配货单信息:</label>
+                        <table id="maintable" class="table">
+
+                        </table>
+                </div>
+
+                <div class="form-group">
+                    <label for="title" class=" col-md-1">破损商品信息：</label>
+                        <table id="detailtable" class="table">
+
+                        </table>
+                </div>
+
+                <div class="form-group">
+                    <label for="title" class="col-md-1">承担金额:</label>
+                    <label for="title" class="control-label col-md-1">
+                        <select class="form-control" name="assumed_ratio">
+                            <option value="">请选择承担比例</option>
+                            <option value="1">全额承担</option>
+                            <option valeu="0">部分承担</option>
+                        </select>
+                        <span class="error-span"></span>
+                    </label>
+                    <label for="title" class="control-label col-md-1">
+                        <input type="text" name="assumed_sum" id="shipmentno" class="form-control"  />
+                        <span class="error-span"></span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                   <label for="title" class="col-md-1">备注说明:</label>
+                    <label for="title" class="col-md-3">
+                         <textarea class="form-control" id="comment" name="comment"></textarea>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <div for="title" class="modal-footer">
+                        <button type='submit' class="btn btn-success btn-save">
+                              <i class="fa"></i>&nbsp;提交
+                        </button>
+                        <button type="button" class="btn btn-warning" data-dismiss="modal">取消</button>
+                    </div>
+                </div>
+
+               {!! Form::close() !!}
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+
+
+    $('#saveForm').submit(function(event) {
+        event.preventDefault();
+        $.ajax({
+            url: '/yd/task/damagedoadd',
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function(data){
+                alert(data.msg);
+                $('#modal').modal('hide');
+                $('#datatable1').bootstrapTable('refresh');
+            },
+            error: function(data){
+                var errors = $.parseJSON(data.responseText);
+                $.each(errors, function(name, value) {
+                    $('#'+name).next('.error-span').text(value);
+                    $('#'+name).parents('.form-group').addClass('has-error');
+                });
+            }
+        });
+    });
+
+    //检验所有数据是否为空!!!
+
+</script>
+
+
+
+
+

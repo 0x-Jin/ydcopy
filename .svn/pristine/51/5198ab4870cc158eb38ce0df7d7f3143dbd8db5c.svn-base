@@ -1,0 +1,12 @@
+<?php
+
+namespace App\Models\Admin\Task;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Express extends Model {
+
+    protected $table = 'order_express';
+    protected $dateFormat = 'U';
+
+}

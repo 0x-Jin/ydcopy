@@ -1,0 +1,208 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Consult;
+
+use Illuminate\Http\Request;
+use App\Http\Requests\Consult\ConsultRequest;
+use App\Http\Controllers\Controller;
+use URL;
+use DB;
+use Illuminate\Support\Facades\Config;
+use Carbon\Carbon;
+
+class IndexController extends Controller {
+    private $return_url;
+    private $pm = 'consult_id';
+    
+    private $to_map = array(
+        'platform'=>array('yhd'=>'一号店','jd'=>'京东','tmall'=>'天猫','yfdyf'=>'益丰大药房','other'=>'其他'),
+        'status'=>array('review'=>'审核中','pass'=>'通过','end'=>'完结')
+    );
+    
+    public function __construct() {
+        Config::set('database.default', 'mysql');
+        $this->return_url = URL::route('consult.index');
+    }
+
+
+    public function indexnew(Request $req) {
+        $req->flashExcept('_token');//存储起来
+        $thead = array('sp'=>'ShopName','title'=>'投诉主题','realname'=>'投诉人姓名','tellphone'=>'电话号码','email'=>'邮箱地址','status'=>'处理状态','address'=>'联系地址','op'=>'操作');
+        $viewData = [
+            'extra' => [
+                'currentCtrl' => '',
+                'exportUrl' => '',
+            ],
+            'data' => [],
+            'thead'=>$thead
+        ];
+        return view('Admin/Consult/Index',$viewData);
+    }
+
+
+    public function post(Request $req) {
+       $reqData = $req->all();
+       if( isset($reqData['mathStart']) && isset($reqData['mathEnd']) && strtotime($reqData['mathEnd']) < strtotime($reqData['mathStart']) ){
+            $viewData = [
+                'draw'=>intval($reqData['draw']),
+                "recordsTotal"=>0,
+                "recordsFiltered"=>0,
+                'data' => []
+            ];
+            exit(json_encode($viewData));
+       }
+       $reqData['pageSize'] = isset($reqData['length'])?$reqData['length']:10;
+       $reqData['pageNo'] = isset($reqData['start'])?$reqData['start']:1;
+       $data_src = DB::table('yfdyf_consult')->select('consult_id','platform','title','realname','tellphone','email','status','address')->where(function($query) use($reqData){
+                    if(!empty($reqData['platform'])){//平台
+                        $query->where('platform',$reqData['platform']);
+                    }
+                })->where(function($query) use($reqData){
+                    if(!empty($reqData['title'])){//标题
+                        $query->where('title','like','%'.$reqData['title'].'%');
+                    }
+                })->where(function($query) use($reqData){
+                    if(!empty($reqData['mathStart'])){//时间
+                        $query->where('published_at','>=',$reqData['mathStart']);
+                    }
+                })->where(function($query) use($reqData){
+                    if(!empty($reqData['mathEnd'])){
+                        $query->where('published_at','<=',$reqData['mathEnd']);
+                    }
+                })->where(function($query) use($reqData){
+                    if(!empty($reqData['status'])){//状态
+                        $query->where('status',$reqData['status']);
+                    }
+                })->orderBy('published_at','desc');
+        $filterCount =  $data_src->count();        
+        $data =   $data_src->take($reqData['pageSize']>0?intval($reqData['pageSize']):10)
+                  ->skip($reqData['pageNo'] > 1 ? $reqData['pageNo'] : 0)
+                  ->get();
+        $newArray = [];
+        foreach($data as $item){
+            $item->status = $this->to_map['status'][$item->status];
+            $item->platform = $this->to_map['platform'][$item->platform];
+            $item = $this->object_to_array($item);
+            $string = "<a href='javascript:update({$item[0]})'>编辑</a>|<a  href='javascript:dele({$item[0]})'>删除</a>";
+            array_splice($item, 0, 1);
+            array_push($item,$string);
+            $newArray[] = $item;
+        }
+        $recordsTotal = DB::table('yfdyf_consult')->count();
+        
+        $viewData = [
+            'draw'=>intval($reqData['draw']),
+            "recordsTotal"=>$recordsTotal,
+            "recordsFiltered"=>$filterCount,
+            'data' => $newArray
+        ];
+        echo json_encode($viewData);
+    }
+    
+    //对象转数组
+    private function object_to_array($obj) 
+    { 
+        $_arr= is_object($obj) ? get_object_vars($obj) : $obj; 
+        foreach($_arr as $key=> $val) 
+        { 
+            $val= (is_array($val) || is_object($val)) ? object_to_array($val) : $val; 
+            $arr[] = $val; 
+        } 
+        return $arr; 
+   }
+  
+   
+
+    //增加相应的处理部分，将查询出来的数据进行替换显示    
+    private function addDeal($data) {
+        $newData = array();
+        //默认部分的修改
+        //抽出数据的所有键进行替换;增加操作部分：
+        foreach ($data as $key => $k) {
+            foreach ($k as $kk => $vv) {
+                if (array_key_exists($kk, $this->map)) {
+                    //存在对键进行替换
+                    //有分隔符对值进行替换，将结果集进行替换
+                    if (stristr($this->map[$kk], '|') !== false) {
+                        //将结束的数组或者其他部分找出来
+                        $end = explode('|', $this->map[$kk]);
+                        eval("\$trans = " . $end[1] . ";");//直接执行代码
+                        if (array_key_exists($vv, $trans)) {
+                            $vv = $trans[$vv];
+                        }
+                        $newData[$key][$end[0]] = $vv;
+                    } else {
+                        $newData[$key][$this->map[$kk]] = $vv;
+                    }
+                }
+                //首键
+                if ($kk == $this->pm) {
+                    $newData[$key]['操作'] = "<a href='javascript:update({$vv})'>编辑</a>|<a  href='javascript:dele({$vv})'>删除</a>";
+                }
+            }
+        }
+        return $newData;
+    }
+
+    //删除内容
+    public function delete(Request $req) {
+        $id = $req->input('id', 1); //指定默认id
+        if (DB::table('yfdyf_consult')->where('consult_id', '=', $id)->delete()) {
+           return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'删除成功']);
+        }
+        return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'删除失败']);
+    }
+
+    //编辑部分,增加验证部分：
+    public function edit(Request $req) {
+        $id = $req->input('id', 1); //指定默认id
+        $data = DB::table('yfdyf_consult')->where('consult_id','=',$id)->get();//
+        $arraymap = array('yhd'=>'一号店','jd'=>'京东','tmall'=>'天猫','yfdyf'=>'益丰大药房','other'=>'其他'); 
+        $data[0]->platform = $arraymap[$data[0]->platform];
+        $images = explode(',',$data[0]->thumb);
+        return view('Admin/Common/Form',['data'=>$data[0],'images'=>$images]); //视图显示
+    }
+
+    //修改,注入验证件,返回页面
+    public function doEdit(ConsultRequest $req) {   
+        //成功 失败返回不同信息,比如两种情况，一种是验证通过，一种则是验证不通过，不通过不能关闭窗体,直接显示内容
+        $id = $req->input('id', 1); //指定默认id
+        $data['status'] = $req->input('status');
+        $data['check_remark'] = $req->input('check');
+        $data['body'] = $req->input('body');
+        $data['edittime'] = Carbon::now()->timestamp; 
+        if (DB::table('yfdyf_consult')
+                        ->where('consult_id', $id)
+                        ->update($data)) {
+            return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'更新成功']);
+        }
+        return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'修改失败']);
+    }
+    
+    
+    public function exportall(){
+        $cellData = [
+         ['序号','平台','标题','真实姓名','电话','email','处理状态','地址']
+        ];
+        $ret = DB::table('yfdyf_consult')->select('consult_id','platform','title','realname','tellphone','email','status','address');
+       
+        $data = DB::select($sql);
+        
+        foreach($data as $item){
+            $item->status = $this->to_map['status'][$item->status];
+            $item->platform = $this->to_map['platform'][$item->platform];
+            $item = $this->object_to_array($item);
+            array_push($cellData, $item);
+        }
+        
+        Excel::create('投诉列表',function($excel) use ($cellData){
+         $excel->sheet('sheet1', function($sheet) use ($cellData){
+           $sheet->setAutoSize(true);
+           $sheet->rows($cellData);
+         });
+       })->export('xls');
+    }
+
+
+
+}

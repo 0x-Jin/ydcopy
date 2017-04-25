@@ -1,0 +1,83 @@
+<?php
+
+Route::group(['middleware' => ['web']], function () {
+
+    Route::get('/', 'Auth\AuthController@getLogin');
+    Route::get('/login', 'Auth\AuthController@getLogin');
+    Route::post('/login', 'Auth\AuthController@postLogin');
+    Route::get('/logout', 'Auth\AuthController@logout');
+
+    Route::get('/t', 'Admin\TestController@index');
+    
+    Route::get('/tousu',['as'=>'tousu', 'uses'=>'ConsultController@index']);//客户投诉前台
+    Route::post('/tsdo',['as'=>'tsdo', 'uses'=>'ConsultController@doConsult']);//客户投诉处理
+    Route::post('/upload',['as'=>'upload', 'uses'=>'ConsultController@upload']);//客户投诉处理
+    Route::get('/address',['as'=>'address', 'uses'=>'ConsultController@address']);//客户投诉处理
+
+    Route::group(['namespace' => 'Admin', 'middleware'=>'auth'], function(){
+        Route::group(['namespace' => 'Goods'], function(){
+            Route::get('/goods/rank', 'RankController@index');
+            Route::post('/goods/rank/{from?}', 'RankController@post');
+            Route::get('/goods/rank/export/{file}', 'RankController@export');
+
+            Route::get('/goods/tel', 'TelController@index');
+            Route::post('/goods/tel/{from?}', 'TelController@post');
+            Route::get('/goods/tel/export/{file}', 'TelController@export');
+
+            Route::get('/goods/principal', 'PrincipalController@index');
+            Route::post('/goods/principal', 'PrincipalController@post');
+            Route::post('/goods/principal/save', 'PrincipalController@save');
+            Route::post('/goods/principal/del', 'PrincipalController@del');
+        });
+
+        Route::group(['namespace' => 'Plat'], function(){
+            Route::get('/plat/sale', 'SaleController@index');
+            Route::post('/plat/sale/{from?}', 'SaleController@post');
+            Route::get('/plat/sale/export/{file}', 'SaleController@export');
+
+            Route::get('/plat/back', 'BackController@index');
+            Route::post('/plat/back/{from?}', 'BackController@post');
+            Route::get('/plat/back/export/{file}', 'BackController@export');
+
+            Route::get('/plat/cat', 'CatController@index');
+            Route::post('/plat/cat/{from?}', 'CatController@post');
+            Route::get('/plat/cat/export/{file}', 'CatController@export');
+        });
+
+        Route::group(['namespace' => 'Customer'], function(){
+            Route::get('/customer/count', 'CountController@index');
+            Route::post('/customer/count/{from?}', 'CountController@post');
+            Route::get('/customer/count/export/{file}', 'CountController@export');
+
+            Route::get('/goods/rebuy', 'RebuyController@index');
+            Route::post('/goods/rebuy/{from?}', 'RebuyController@post');
+            Route::get('/goods/rebuy/export/{file}', 'RebuyController@export');
+        });
+        
+        Route::group(['namespace' => 'Consult'], function(){
+            Route::get('/consult/index',['as'=>'consult.index', 'uses'=>'IndexController@index']);//需要增加删除
+            Route::get('/consult/dele',['as'=>'consult.dele', 'uses'=>'IndexController@delete']);//需要增加删除
+            Route::post('/consult/post',['as'=>'consult.post',  'uses'=>'IndexController@post']);
+            Route::post('/consult/edit',['as'=>'consult.edit', 'uses'=>'IndexController@edit']);//修改部分
+            Route::post('/consult/doEdit',['as'=>'consult.doEdit', 'uses'=>'IndexController@doEdit']);
+        });
+
+        Route::group(['namespace' => 'Task'], function(){
+            Route::get('/task/customerlog', 'CustomerLogController@index');
+            Route::post('/task/customerlog/{from?}', 'CustomerLogController@post');
+
+            Route::get('/task/express', 'ExpressController@index');
+            Route::post('/task/express', 'ExpressController@post');
+            Route::post('/task/express/log', 'ExpressController@log');
+        });
+
+        Route::group(['namespace' => 'Tool'], function(){
+            Route::get('/tool/store', 'StoreController@index');
+            Route::post('/tool/store', 'StoreController@post');
+
+            Route::get('/tool/ordergoods', 'OrderGoodsController@index');
+            Route::post('/tool/ordergoods', 'OrderGoodsController@post');
+        });
+    });
+});
+

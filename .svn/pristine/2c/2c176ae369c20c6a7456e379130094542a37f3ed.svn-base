@@ -1,0 +1,599 @@
+<?php
+namespace App\Http\Controllers\Admin\Task;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Input;
+use App\Models\Admin\TaskManage;
+use DB;
+use URL;
+use Image;
+
+// 操作时间 === 发生流转，完结的时间
+//继承接口  ，确保字段一致性
+class ManageController extends Controller
+{
+    //需要映射的字段
+    private $to_map = array(
+        'platform'=>array('yhd'=>'一号店','jd'=>'京东','tmall'=>'天猫','yfdyf'=>'益丰大药房','other'=>'其他'),
+        'status'=>array('on'=>'进行中','finished'=>'完结')
+    );
+    //
+    private $delimter = '-';
+    
+    private $white_msg = [
+       'success'=>'操作成功'
+    ];
+    
+    private $black_msg = [
+        'no_right'=>'无权操作',
+        'finish'=>'任务已经结束',
+        'not_in'=>'不在当前的任务中',
+        'not_yours'=>'不是你的流程，不可以进行操作'
+    ];
+    
+    private $salt = "gxjseui4873495jjddmxx";
+    
+    //允许上传的文件类型
+    private $extension = ["png", "jpg", "gif"]; 
+    
+    //先使用mysql
+    public function __construct() {
+         Config::set('database.default', 'mysql');
+         $this->return_url = URL::route('taskmanage.index');//当前的所有操作最终跳转的页面：
+    }
+    
+    //首页展示
+    public function index(Request $req){
+        $req->flashExcept('_token');//存储起来
+        $thead = array('id'=>'ID','sp'=>'ShopName','title'=>'需求部门','realname'=>'需求主体','tellphone'=>'需求人','email'=>'期望完成时间','getperson'=>'(当前)处理人','address'=>'(当前)分工部门',
+            'rank'=>'当前优先级','status'=>'(当前)处理状态','op'=>'操作');
+        //为数据添加相应的操作列
+        $viewData = [
+            'extra' => [
+                'currentCtrl' => $this->getCutCtrlPath('\\'),
+                'exportUrl' => '',
+            ],
+            'data' => [],
+            'thead'=>$thead
+        ];
+        return view($this->getCutCtrlPath(),$viewData);
+    }
+    
+    //进行查找所有的任务 ：查询方便，添加就复杂 ： 添加简单，查询就复杂
+    //{ mathStart,mathEnd,platform,status,giveperson,toperson,title } 
+    public function post(Request $req){
+       //第一步 就牵涉到多表联查,建立任务模型：
+       $reqData = $req->all();
+       if( isset($reqData['mathStart']) && isset($reqData['mathEnd']) && strtotime($reqData['mathEnd']) < strtotime($reqData['mathStart']) ){
+           return ;
+        }
+        $reqData['pageSize'] = isset($reqData['length'])?$reqData['length']:10;
+        $reqData['pageNo'] = isset($reqData['start'])?$reqData['start']:1;
+        //多表查询困难？
+        //使用闭包查询，可能需要用到left join left join 返回了多个条数,想改成两步，但是不行，分两步查找也困难
+        $data_src = DB::table('yfdyf_task')
+                ->select(array(DB::raw('DISTINCT yfdyf_task.task_id'),'yfdyf_task.platform', 'yfdyf_task.department_id', 'yfdyf_task.title','yfdyf_task.author','yfdyf_task.expire_time','yfdyf_task_detail.currentone','yfdyf_task_detail.current_department'
+                        ,'yfdyf_task_detail.rank','yfdyf_task.status'))
+                ->join('yfdyf_task_detail', function($join){
+                     $join->on('yfdyf_task.task_id', '=', 'yfdyf_task_detail.task_id');
+                })
+                ->where(function($query) use($reqData){
+                    if(!empty($reqData['platform'])){//平台
+                        $query->where('yfdyf_task.platform',$reqData['platform']);
+                    }
+                })->where(function($query) use($reqData){
+                    if(!empty($reqData['title'])){//标题
+                        $query->where('yfdyf_task.title','like','%'.$reqData['title'].'%');
+                    }
+                })->where(function($query) use($reqData){
+                    if(!empty($reqData['mathStart'])){//时间
+                        $query->where('yfdyf_task.addtime','>=',$reqData['mathStart']);
+                    }
+                })->where(function($query) use($reqData){
+                    if(!empty($reqData['mathEnd'])){
+                        $query->where('yfdyf_task.addtime','<=',$reqData['mathEnd']);
+                    }
+                })->where(function($query) use($reqData){
+                    if(!empty($reqData['status'])){//状态
+                        $query->where('yfdyf_task.status',$reqData['status']);
+                    }
+                })->where(function($query) use($reqData){
+                    if(!empty($reqData['giveperson'])){//需求部门
+                        $query->where('yfdyf_task.department_id',$reqData['giveperson']);
+                    }
+                })->where(function($query) use($reqData){
+                    if(!empty($reqData['toperson'])){//分工部门
+                        $query->where('yfdyf_task_detail.current_department',$reqData['toperson']);//分给当前的人
+                    }
+                })->where('yfdyf_task_detail.nextone',null)->orderBy('yfdyf_task.addtime','desc');
+            
+        $filterCount =  $data_src->count();        
+        $data =   $data_src->take($reqData['pageSize']>0?intval($reqData['pageSize']):10)
+                  ->skip($reqData['pageNo'] > 1 ? $reqData['pageNo'] : 0)
+                  ->get();
+        $newArray = [];
+
+        foreach($data as $item){
+            $item->status = $this->to_map['status'][$item->status];
+            $item->platform = $this->to_map['platform'][$item->platform];
+            //增加显示的效果
+            $item->current_department = $item->current_department."<span onmouseover='show_task_progress(".$item->task_id.",this)' class='fa fa-search'></span>";
+            $item->expire_time = date('Y-m-d',$item->expire_time);
+            $item = $this->object_to_array($item);
+            $string = "<a href='javascript:update({$item[0]})'>编辑</a>|<a  href='javascript:dele({$item[0]})'>删除</a>";
+            //array_splice($item, 0, 1); 第一个也保留 为了确定当前的列，不得不增加
+            //部门，员工的相应信息转换---需求人，需求部门，当前部门，当前员工
+            
+            
+            
+            
+            array_push($item,$string); //将当前分工部门进行数据传递  附带一个
+            $newArray[] = $item;
+        }
+        $recordsTotal = DB::table('yfdyf_task')->count();
+        
+        $viewData = [
+            'draw'=>intval($reqData['draw']),
+            "recordsTotal"=>$recordsTotal,
+            "recordsFiltered"=>$filterCount,
+            'data' => $newArray
+        ];
+        echo json_encode($viewData);
+    }
+    
+    //对象转数组
+    private function object_to_array($obj) 
+    { 
+        $_arr= is_object($obj) ? get_object_vars($obj) : $obj; 
+        foreach($_arr as $key=> $val) 
+        { 
+            $val= (is_array($val) || is_object($val)) ? object_to_array($val) : $val; 
+            $arr[] = $val; 
+        } 
+        return $arr; 
+   }
+    
+    //更改选定,有很多控制部分 最多允许流转   first（首个人）,current（当前人）,last（上一个）,next（下一个） 四个组别
+    //这里只能显示，为每个图片生成一个code
+    public function edit(Request $req){
+        $current = 3;//设定当前的用户
+        //判断用户拥有的可修改的权限部分
+        $id = $req->input('id',1);
+        //所有当前任务链上的信息,按进行的顺序查找,find默认首键为id，注意转化成数组对象，这样排序是为了数组是按传递顺序的
+        $mainObject = TaskManage::find($id);
+        $maindata = $mainObject->toArray();
+        $chainData = $mainObject->TaskDetail()->orderBy('order','asc')->get()->toArray();//找到所有的链
+        $flag = 0;
+        //判断当前的人在这个链上
+        //当前的人只能看到自己的上一节点  发起者只能看到下一节点   管理人只能编辑任务发送者的信息：而无法进行对其他的
+        //要通过权限进行控制的只有当前的节点
+        if( $this->is_admin() ){//需要查找主表的内容，准备两个个模板吧
+                $flag = 1;
+                //查找主表的内容 
+                     //可以看到下一级和当前级 管理员可控制发起级而无权控制下一级
+                $chainData[1]['addons'] = explode(',',$chainData[1]['addons']);//$this->make_all($chainData[1]);
+                $next = ['write'=>0,'data'=>$chainData[1]]; //不可修改
+                $chainData[0]['addons'] = explode(',',$chainData[0]['addons']);//$this->make_all($chainData[0]);
+                $current =['write'=>1,'data'=>$chainData[0]]; //可以修改
+                $last = [];//下一级为空
+        }else{
+            foreach($chainData as $k=>$v){
+            if($v['currentone'] == $current){//说明是可以看到的;
+                if ($v['order'] == 1) {//如果是发起人
+                    $flag = 1;
+                    $chainData[$k+1]['addons'] = explode(',',$chainData[$k+1]['addons']);//explode(',',$chainData[$k-1]['addons']); $this->make_all($chainData[$k+1]);
+                    $next = ['write'=>0,'data'=>$chainData[$k+1]];//不可修改
+                    $chainData[$k]['addons'] = explode(',',$chainData[$k]['addons']);//$this->make_all($chainData[$k]);
+                    $current = ['write'=>0,'data'=>$chainData[$k]];//可以修改
+                    $last = [];
+                }
+                else{  //查看上一级和自身 自身可控制，这些变量的定义  这里面有一个问题： 避免查询主表
+                    $flag = 2;
+                    //附件处理：
+                   //$chainData[$k-1]['addons'] = $this->make_all($chainData[$k-1]);
+                    $chainData[$k-1]['addons'] = explode(',',$chainData[$k-1]['addons']);
+                    $last = ['write'=>0,'data'=>$chainData[$k-1]];//上一级不可控制
+                   //$chainData[$k]['addons'] = $this->make_all($chainData[$k]);
+                    $chainData[$k]['addons'] = explode(',',$chainData[$k]['addons']);
+                    $current = ['write'=>1,'data'=>$chainData[$k]];//当前级可以查看，下一级呢？如果当前的状态是完成则显示下一级
+                    $next = [];//下一级只出现在任务完成的时候
+                    //查看当前级的状态:完成和非最后的节点，判断是否显示下一级
+                    if($v['status'] == 'finished' && $v['nextone'] !== null){//说明任务已经得到了流转，并且已经是最后一级了
+                       // $chainData[$k]['addons'] = $this->make_all($chainData[$k]);
+                        $chainData[$k]['addons'] = explode(',',$chainData[$k]['addons']);
+                        $current = ['write'=>0,'data'=>$chainData[$k]];//当前的已经无法查看了
+                        //$chainData[$k+1]['addons'] = $this->make_all($chainData[$k+1]);
+                        $chainData[$k+1]['addons'] = explode(',',$chainData[$k+1]['addons']);
+                        $next = ['write'=>0,'data'=>$chainData[$k+1]];//分发的下一级同样无法控制了：
+                    }  
+                }
+                break;
+            }
+           }
+        }
+        if($flag == 2){//假设在这个链上
+            //显示，是否可以控制
+            return view('Admin/Task/editManage',['current'=>$current,'next'=>$next,'last'=>$last]);
+        }elseif($flag == 1){
+            $current['data']['title'] = $maindata['title'];
+            //$current['data']['description'] = $maindata['description'];
+            return view('Admin/Task/begineditManage',['current'=>$current,'next'=>$next,'last'=>$last]);
+        }else{//提示没有操作权限
+            return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'无权操作当前任务']);
+        }
+    }
+    
+    //生成下载的code，要确保能够解密出来
+    private function create_code($data){
+        return base64_encode(base64_encode($data['task_id'].$this->delimter.$data['datail_id'].$this->delimter.$data['count']).base64_encode($this->salt));
+    }
+    
+    //批量完成,进行下载
+    private function make_all($data){
+        if(empty($data['addons'])){
+            return [];
+        }
+        $addons = explode(',',$data['addons']);//附件部分还要优化
+        foreach($addons as $k=>$v){
+            $data['addons'][$k] =  $this->create_code(
+                [
+                    'task_id'=>$data['task_id'],
+                    'detail_id'=>$data['detail_id'],
+                    'list'=>$k+1
+                ]);
+        }
+        return $data['addons'];
+    }
+    
+    
+    //修改提交  这两部分相当复杂  是只有当前进行节点和管理员才可以进行的操作 还有一点：当前任务已经被完成 
+    //不需要判断任务已经结束，只需要确认节点的状态即可
+    //中间节点者进行操作的部分
+    public function doedit(Request $req){
+        //修改处理部分也分三部门处理
+        dd($req);        
+        //判断是否有权限修改 ,得到当前的任务id
+        $task_id = $req->input('task_id',1);
+        $main_task = DB::table('yfdyf_task')->find($task_id)->toArray();
+        //如果当前任务已经结束：
+        if($main_task['status'] == 'finished'){
+           return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'当前任务已经完结，不可以修改']);  
+        }
+        
+        $current = 1;//得到当前的人是？
+        
+        //当前的节点信息部分：
+        $detail_task_id = $req->input('detail_task_id',1);
+        
+        //得到当前的节点是否可以操作，若当前的节点已经完成，不可操作，当前的节点没完成的话：是否是自己的节点，如果不是自己的节点不可以编辑，并且管理员可以编辑第一个节点
+        
+        //查找当前的数据
+        $node_id = DB::table('yfdyf_task_detail')->find($detail_task_id)->get()->toArray();
+        //当前的节点结束了
+        if($node_id['status'] == 'finished'){
+             return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'此节点已经完结，不可以进行操作']); 
+        }
+        //操作别人的流程
+        if($node_id['currentone'] != $current){
+            return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'流程不是你的，不可以进行操作']); 
+        }
+        //解决上面所有的情况后
+        $current = $req->input('current');//自己的节点,数组
+        dd($current);
+        
+        $next = $req->input('next');//下一个节点，可以指定人和部门
+        dd($current);
+        
+        //有三种方式--一种是直接完结该节点(相当于任务被结束了)，另一种是对当前节点进行保存,最后一种是直接分给下面的人 
+        if( !empty($req->input('finshed')) ){//直接将任务在此结束
+            //直接将节点状态重置为完结
+            $myself['staus'] = 'finished';
+
+            $myself['remark'] = $current['remark'];
+            
+            $myself['edit_time'] = time();
+            
+            
+            $current['addons'] = explode(',',$current['addons']); //数组
+            
+            $myself['addons'] =  $current['addons'];//更加复杂的处理
+            
+            
+            //更新当前节点,更新时间，状态，备注，附件信息
+            if( !DB::table('yfdyf_task_detail')->where('detail_id',$detail_task_id)->save($myself) ){
+                 return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'更新失败']); 
+            }
+            
+            //更新总节点
+            if(DB::table('yfdyf_task')->where('task_id',$node_id['task'])->save(['status'=>'finished'])){
+                  return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'当前任务被你完结了']); 
+            }
+            
+            return;
+        }
+        
+        //保存，只需要自身数据即可：
+        if( !empty($req->input('save'))){
+            $current['addons'] = implode(',',$current['addons']);
+            
+            //备注，附件，优先级等数据
+            $myself = array(
+                'edittime'=>time(),
+                'addons'=>$current['addons'],
+                'rank'=>$current['rank'],
+                'remark'=>$current['remark'],
+                'expired_time'=>strtotime($current['expired_time']),
+                'op_time'=>strtotime($current['op_time'])
+            );
+            //更新当前节点
+            if( DB::table('yfdyf_task_detail')->where('detail_id',$detail_task_id)->save($myself) ){
+                return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'当前任务点被保存']);  
+            }
+            return ;
+        }
+        
+        //流转
+        if( !empty($req->input('turn'))){
+            //备注，附件，优先级等数据
+            $myself = array(
+                'remark'=>$current['remark'],
+                'addons'=>implode(',',$current['addons']),
+                'rank'=>$current['rank']
+            );
+            //更新当前节点，确定被完结
+            if(DB::table('yfdyf_task_detail')->where('detail_id',$detail_task_id)->save($myself)){
+                //插入新节点,排序，当前人，
+                $newdata = array(
+                      'order'=>$node_id['order'] + 1,
+                      'currentone'=>$next['currentone'],
+                      'task_id'=>$task_id,
+                      'current_department'=> $next['current_department'],
+                      'lastone'=>$this->getCurrentPersonInfo()['pid'],
+                      'status'=>'on'
+                );
+                if(DB::table('yfdyf_task_detail')->insert($newdata))
+                  return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'当前任务点流转到了下一节点']);  
+            }else{
+                return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'当前任务点流转失败']);  
+            }
+            return;
+        }
+    }//end function
+    
+    //发起者和管理员修改部分：只有保存部分
+    public function firstEdit(Request $req){
+        $task_id = $req->input('task_id');
+        //找到当前的任务
+        $task_item = TaskManage::find($task_id)->toArray();
+        if( $task_item['status'] == 'finished' ){
+            return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'任务已经结束,无权修改']); 
+        }
+        //所有请求
+        $allreq = $req->all();
+        dd($allreq);
+        //必填项开始检验，检验部分信息
+        if(empty($allreq['currentone'])){
+            //错误1
+             return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'请选择人']); 
+        }
+        if(empty($allreq['current_department'])){
+            //错误2
+             return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'请选择部门']); 
+        }
+        //发布者没有权限，不能修改，只有管理员可以控制
+        $data_req = $req->input('current');//所有的信息
+        if( $this->is_admin() ){
+          //判断管理员 ,若是更新主表:
+          $data['anthor'] =  $data_req['currentone'];
+          $data['department_id'] = $data_req['current_department'];
+          $data['title'] = $data_req['title'];
+          $data['platform'] = $data_req['platform'];
+          $data['edittime'] = time();
+          if( !DB::table('yfdyf_task')->where('task_id',$id)->save($data) ){
+              return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'更改失败']); 
+          }
+          //更新附表的第一个
+              //当前人，当前部门，附件，备注信息
+              $detail_data = array(
+                  'currentone'=>$data_req['currentone'],
+                  'edittime'=>time(),
+                  'current_department'=>$data_req['current_department'],
+                  'addons'=>implode(',',$data_req['addons']),
+                  'remark'=>$data_req['remark']
+              );
+              if( DB::table('yfdyf_task_detail')->insert($detail_data) ){
+                return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'操作成功']); 
+              }
+       }else{
+          return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'无权操作']); 
+       }
+    }
+    
+    
+    //判断管理员
+    private function is_admin(){
+        return false;
+    }
+    
+    //附件下载地址; 
+    public function downFile(Request $req){
+        $code = base64_decode($req->input('code'));
+        //解析出来
+        $pos = substr($code,0,strlen($code)-strlen(base64_decode($this->salt)));
+        list($task_id,$detail_id,$list) = explode($this->delimter,$pos);
+        //查找数据库，得到当前的文件位置
+        $files = DB::table('yfdyf_task')->select('addons')->where(array('task_id'=>$task_id,'detail_id'=>$detail_id))->get();
+        $filearray = explode(',',$files['addons']);
+        $file = $filearray[$list-1];//得到当前的文件是哪一个
+        //应该是不要其他参数的
+        if( code ==  sha1(base64_encode($task_id.'-'.$detail_id.'-'.$list).base64_encode($this->salt))  ){
+           if (file_exists($file)) {
+            header('Content-Description: File Transfer');
+            header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename='.basename($file));
+            header('Content-Transfer-Encoding: binary');
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+            header('Pragma: public');
+            header('Content-Length: ' . filesize($file));
+            ob_clean();
+            flush();
+            readfile($file);
+            exit;
+          }
+        }
+    }
+    
+    
+
+    
+    
+    //删除：使用关联删除
+    public function dele(Request $req){
+        $id = $req->input('id', 1); //指定默认id
+        if (TaskManage::find($id)->TaskDetail()->where('task_id',$id)->first()->delete()) {//关联删除部分
+           return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'删除任务成功']);
+        }
+        return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'删除任务失败']);
+    }//end function 
+    
+    
+    //增加管理任务，必须指定下一级的人，否则编辑会发生错误
+    public function add(){
+       //读取当前的人的信息
+       $person = $this->getCurrentPersonInfo();
+       return view('Admin\Task\addManage',['person'=>$person]); 
+    }
+    
+    //doadd 添加 注入验证件 标题描述 期望时间必填
+    public function doadd(Request $req){
+        $reqdata = $req->all();
+        if(empty($reqdata['title'])){
+           return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'标题不能为空']);
+        }
+        
+        if(empty($reqdata['expire_time'])){
+            return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'期望时间不能为空']);
+        }
+        
+        if(empty($reqdata['getone']) || empty($reqdata['worker'])){
+            return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'接收人的或部门不能为空']);
+        }
+        
+        //添加任务
+           //发起人部分，部门+员工+期望日期，操作日期：
+           $myinfo = $this->getCurrentPersonInfo();
+           $data['expire_time'] = $reqdata['expire_time'];//期望时间
+           $data['title'] = $reqdata['title'];//标题
+           $data['addtime'] = time();//添加时间
+           $data['status'] = 'on';//当前任务状态
+           //得到当前操作的信息
+           $data['department_id'] = $myinfo['did'];
+           $data['author'] = $myinfo['pid'];
+           //接收人部分
+           $receive['getone'] = $reqdata['getone'];//人员
+           $receive['worker'] = $reqdata['worker'];//部门
+        //主表和附表共同跑一次:主表一条，附表两条
+        $insert_id = DB::table('yfdyf_task')->insertGetId($data);//主表要更新的字段
+        //dd($insert_id);
+        $receive['task_id'] = $insert_id;//得到对应的id
+        //得到相应的子节点
+        DB::table('yfdyf_task_detail')->insert(
+                array(
+                    'order'=>1,'status'=>'finished','addons'=>'',
+                    'remark'=>$reqdata['body'],'currentone'=>$myinfo['pid'],
+                    'current_department'=>$myinfo['did'],'task_id'=>$receive['task_id'],
+                    'nextone'=>$receive['getone']
+                )
+        );
+        //接上个节点
+        DB::table('yfdyf_task_detail')->insert(
+                array(
+                    'order'=>2,'status'=>'on','addons'=>'','remark'=>$reqdata['body'],
+                    'currentone'=>$reqdata['getone'],'current_department'=>$reqdata['worker'],
+                    'task_id'=>$receive['task_id'],'lastone'=>$myinfo['pid']
+                )
+        );
+        return view('Admin/Common/Message',['title'=>'操作提示','url'=>$this->return_url,'message'=>'添加任务成功']);
+    }//end function 
+    
+    
+    //公共数据接入
+    //public function api(){
+    //}
+    
+    
+    //得到操作此人的信息
+    private function getCurrentPersonInfo(){
+         return ['pid'=>1,'did'=>1];
+    }
+    
+    
+    
+    //附件上传部分
+    public function upload(){
+        //检测当前的文件列表：文件列表如何处理
+        $file = Input::file('files');
+
+        if ( $file->getClientOriginalExtension() && !in_array($file->getClientOriginalExtension(), $this->extension) ) {
+            return response()->json( array('error'=>0,'msg'=>'只允许下面图片 png, jpg or gif') );
+        }
+        //得到设定的上传限制
+//        if($file->getClientSize() > ini_get("upload_max_filesize")  || $file->getClientSize() > ini_get("post_max_size")){
+//            return json_encode( array('error'=>1,"msg"=>'文件大小超过设定上传大小') );
+//        }
+        //文件上传目录 
+        $destinationPath = 'uploads/addons/';
+        $extension = $file->getClientOriginalExtension();
+        $fileName = str_random(10).microtime().'.'.$extension;
+        //图片处理库
+        $file->move($destinationPath, $fileName);
+        //上传之后插入一个input
+        return response()->json( array('error'=>0,'msg'=>asset($destinationPath.$fileName),'short'=>$fileName) );
+    }
+    
+    //删除附件：
+    public function filedel(Request $req){
+        $filename = $req->input('name');//得到要删除的文件名
+        //检验文件的所属位置判断是否有删除的权限：
+        if(!file_exists(public_path().$filename)){
+           return json_encode(array('error'=>1,'msg'=>'文件删除失败')); 
+        }
+        File::delete( public_path().$filename);//将该文件删除
+        if(File::delete( public_path().$filename))
+           return json_encode(array('error'=>0,'msg'=>'文件删除成功'));
+        return json_encode(array('error'=>1,'msg'=>'文件删除失败'));
+    }
+    
+    //ajax 显示进度：所有当前的进度表，无问题：
+    public function showProgress(Request $req){
+        //得到当前的任务;
+        $task_id = intval($req->input('task_id',1));
+        
+        $chainData = TaskManage::find($task_id)->TaskDetail()->orderBy('order','asc')->get()->toArray();
+        
+        $table = "<table class='table'>";
+        
+        foreach($chainData as $v){
+            $table .="<tr>";
+            
+            $table .= "<td>{$v['current_department']}--{$v['currentone']}---{$this->to_map['status'][$v['status']]}</td>";
+            $table .= "</tr>";
+        }
+        
+        $table .= "</table>";
+        
+        echo $table;
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+}
+

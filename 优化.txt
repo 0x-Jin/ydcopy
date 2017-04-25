@@ -1,0 +1,46 @@
+       
+//代码优化部分：	   
+		
+//        多表查询困难？
+//        使用闭包查询，可能需要用到left join left join 返回了多个条数,想改成两步，但是不行，分两步查找也困难      
+//        这里包含着重大问题
+//        $data_src = DB::table('yfdyf_task')
+//                        ->select(array(DB::raw('DISTINCT yfdyf_task_detail.task_id'), 'yfdyf_task.platform', 'yfdyf_task.department_id', 'yfdyf_task.title', 'yfdyf_task.author', 'yfdyf_task.expire_time', 'yfdyf_task_detail.currentone', 'yfdyf_task_detail.current_department'
+//                            , 'yfdyf_task_detail.rank', 'yfdyf_task.status'))
+//                        ->join('yfdyf_task_detail', function($join) {
+//                            $join->on('yfdyf_task.task_id', '=', 'yfdyf_task_detail.task_id');
+//                        })
+//                        ->where(function($query) use($reqData) {
+//                            if (!empty($reqData['platform'])) {//平台
+//                                $query->where('yfdyf_task.platform', $reqData['platform']);
+//                            }
+//                        })->where(function($query) use($reqData) {
+//                    if (!empty($reqData['title'])) {//标题
+//                        $query->where('yfdyf_task.title', 'like', '%' . $reqData['title'] . '%');
+//                    }
+//                })->where(function($query) use($reqData) {
+//                    if (!empty($reqData['mathStart'])) {//时间
+//                        $query->where('yfdyf_task.addtime', '>=', $reqData['mathStart']);
+//                    }
+//                })->where(function($query) use($reqData) {
+//                    if (!empty($reqData['mathEnd'])) {
+//                        $query->where('yfdyf_task.addtime', '<=', $reqData['mathEnd']);
+//                    }
+//                })->where(function($query) use($reqData) {
+//                    if (!empty($reqData['status'])) {//状态
+//                        $query->where('yfdyf_task.status', $reqData['status']);
+//                    }
+//                })->where(function($query) use($reqData) {
+//                    if (!empty($reqData['giveperson'])) {//需求部门
+//                        $query->where('yfdyf_task.department_id', $reqData['giveperson']);
+//                    }
+//                })->where(function($query) use($reqData) {
+//                    if (!empty($reqData['toperson'])) {//分工部门
+//                        $query->where('yfdyf_task_detail.current_department', $reqData['toperson']); //分给当前的人
+//                    }
+//                })->where('yfdyf_task_detail.nextone', null)->orderBy('yfdyf_task_detail.detail_id', 'desc');
+//
+//        $filterCount = DB::table('yfdyf_task')->count();
+//        $data = $data_src->take($reqData['pageSize'] > 0 ? intval($reqData['pageSize']) : 10)
+//                ->skip($reqData['pageNo'] > 1 ? $reqData['pageNo'] : 0)
+//                ->get();

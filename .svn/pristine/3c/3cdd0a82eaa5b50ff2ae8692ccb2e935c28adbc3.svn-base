@@ -1,0 +1,107 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use DB;
+use Symfony\Component\VarDumper\Tests\VarClonerTest;
+
+use App\Models\Admin\Task\Decision;
+
+class ImportOrderDecision extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'import:order_decision';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'import order decision data from SQL Server to Mysql';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle(Decision $decision){
+        logger("artisan {$this->signature} stared", []);
+
+        $mssql = DB::connection('sqlsrv');
+
+        $mssql->setFetchMode(2);
+        $mssql->enableQueryLog();
+
+        $date = date('Y-m-d');
+
+        $querySql = "select * from salesorder where payamount > 1000 and quantity > 20 and recordDate between '{$date} 00:00:00.000' and '{$date} 23:59:59.999'";
+
+        $orderData = $mssql->select($querySql);
+
+        $this->output->progressStart(count($orderData));
+        $orderData = $mssql->select($querySql);
+
+        foreach($orderData as $row){
+            $orderDetail = $mssql->select("select * from SalesOrderLine where SalesOrderHeaderId = ?", [$row['Order_ID']]);
+            $skuInfo = [];
+            foreach($orderDetail as $detail){
+                $skuInfo[$detail['ProductSkuId']] = $mssql->select("select * from product_sku where sku_id = ?", [$detail['ProductSkuId']]);
+            }
+            $order_main = json_encode($row);
+            $order_goods = json_encode($orderDetail);
+            $order_sku = json_encode($skuInfo);
+
+            if($decision->where('order_id', $row['Order_ID'])->first()){
+                $bool = $decision->update([
+                    'order_id'      => $row['Order_ID'],
+                    'order_main'    => $order_main,
+                    'order_detail'  => $order_goods,
+                    'order_goods_info' => $order_sku
+                ]);
+            } else {
+                $bool = $decision->create([
+                    'order_id'      => $row['Order_ID'],
+                    'order_main'    => $order_main,
+                    'order_detail'  => $order_goods,
+                    'order_goods_info' => $order_sku
+                ]);
+            }
+
+            if(! $bool){
+                logger('import decision failed', ['OrderId'=>$row['Order_ID']]);
+            }
+            $this->output->progressAdvance();
+        }
+        $this->output->progressFinish();
+
+        logger("artisan {$this->signature} finished", []);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,71 @@
+<?php
+namespace App\PageService\Admin\Goods;
+
+use App\PageService\PageService;
+use Curl;
+
+
+class Tel extends PageService {
+
+
+    protected  function _genSql($params, $dbConfig='sqlsvr'){
+        if($dbConfig == 'sqlsrv'){
+            $sql = "
+              select distinct convert(varchar(255), ConsigneeMobile) as ConsigneeMobile
+              from SalesOrder
+              where
+                  CreateDate between '{$params['start']} 00:00:00.000' and '{$params['end']} 23:59:59.999'
+                  and Order_ID in (select distinct SalesOrderHeaderId from SalesOrderLine where ProductName like '%{$params['keyWord']}%')
+            ";
+        } else {
+            $sql = "
+            select distinct SHRSJ from DD
+            where
+                SHRSJ!='null' and SHRSJ!='' and ZJE>'0'
+                and RQ>'{$params['start']} 00:00:00.000' and RQ<'{$params['end']} 23:59:59.999'
+                and GUID in ( select distinct FGUID from DDSPMX where TB_SPMC like '%{$params['keyWord']}%' )
+            union
+            select distinct SHRSJ from DD_Archive
+            where
+                SHRSJ!='null' and SHRSJ!='' and ZJE>'0'
+                and RQ>'{$params['start']} 00:00:00.000' and RQ<'{$params['end']} 23:59:59.999'
+                and GUID in (
+                    select distinct FGUID from DDSPMX_Archive where TB_SPMC like '%{$params['keyWord']}%')
+            ";
+        }
+        return $sql;
+    }
+
+    protected function _queryDB($params, $path, $strQuery){
+        $dbConfig = strtotime($params['end']) < strtotime('2015-12-01') ? 'sqlsrv_old' : 'sqlsrv';
+        $sql = $this->_genSql($params, $dbConfig);
+        $rt = $this->_select($sql, $dbConfig);
+        if(!empty($rt)){
+            $rt = call_user_func_array(array($this, '_fmtData'), [$rt,$dbConfig]);
+            $content = serialize($rt);
+            $this->_putQueryLog($path, $content, $strQuery);
+        }
+        return $rt;
+
+    }
+
+    protected function _fmtData($rawData, $dbConfig='sqlsrv'){
+        if($dbConfig == 'sqlsrv'){
+            $postStr = '';
+            foreach($rawData as $row){
+                $postStr.= $row['ConsigneeMobile']."\r\n";
+            }
+            $response = Curl::to('http://192.168.228.189:8080/Default.aspx')->withData(['mobile_nums'=>$postStr])->post();
+            $pattern = '/(?is)<textarea id="res_mobile_nums".*?>(.*)?<\/textarea>/';
+            preg_match($pattern, $response, $matches, PREG_OFFSET_CAPTURE, 3);
+            $fmtData = explode("\r\n",trim($matches[1][0]));
+        } else {
+            foreach($rawData as $row){
+                $fmtData[] = $row['SHRSJ'];
+            }
+        }
+        $l = count($fmtData);
+        $fmtData = array_merge($fmtData, array_fill($l, 5-$l%5, ''));
+        return $fmtData;
+    }
+}

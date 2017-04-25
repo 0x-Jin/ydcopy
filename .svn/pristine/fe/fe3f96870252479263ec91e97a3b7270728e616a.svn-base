@@ -1,0 +1,88 @@
+@extends('Admin.Layouts.master')
+@section('title', '订单导出')
+@section('breadcrumb')
+    <li>工具管理</li>
+    <li class="active">订单导出</li>
+@endsection
+
+@section('toolbar')
+<div class="row form-inline form-ranking">
+    <form action="{{ url()->current() }}" method="POST">
+    <div class="form-group pull-right">
+        <div class="form-group">
+            {{ csrf_field() }}
+            <label class="control-label">时间：</label>
+            {{ Form::input('text', 'startDate', old('startDate'), ['class'=>'form-control datepicker']) }}
+            <?php
+                $hourOpts = [];
+                foreach(range(0, 23) as $val){
+                    $k = sprintf('%02d', $val);
+                    $hourOpts[$k] = $k;
+                }
+            ?>
+            {{ Form::select('startHour', $hourOpts, old('startHour'), ['class'=>'form-control', 'tabindex'=>'-1', 'aria-hidden'=>'true']) }}
+            :00:00
+            <span class="add-on control-label">至</span>
+            {{ Form::input('text', 'endDate', old('endDate'), ['class'=>'form-control datepicker']) }}
+            {{ Form::select('endHour', $hourOpts, old('endHour'), ['class'=>'form-control', 'tabindex'=>'-1', 'aria-hidden'=>'true']) }}
+            :59:59
+        </div>
+        <div class="form-group">
+            <button class="btn btn-primary btn-search mr10" type="submit">
+                <i class="fa fa-search"></i>&nbsp;查询
+            </button>
+            <a class="btn btn-warning btn-nocache mr10" data-url="{{ url()->current() }}?nocache=1" href="javascript:;">
+                <i class="fa fa-refresh"></i>&nbsp;无缓存查询
+            </a>
+            <a class="btn btn-success btn-export mr10" href="javascript:alert('请先查询!');">
+                <i class="fa fa-download"></i>&nbsp;导出
+            </a>
+        </div>
+    </div>
+    </form>
+</div>
+@endsection
+
+
+@section('table')
+    @if(isset($data))
+        <div class="row col-md-12">
+            <div class="text-right mb10">
+                @if($total == 0)
+                    未找到数据
+                @else
+                    共有 {{ $total }} 条数据， 最多显示1000条！查看详细请导出！
+                @endif
+            </div>
+        </div>
+        @parent
+    @endif
+@endsection
+
+@section('js')
+    @parent
+    <script>
+        $(function(){
+
+            $('.btn-nocache').on('click', function(){
+                $('form').attr('action', $(this).attr('data-url')).submit();
+                return false;
+            });
+
+            @if(isset($file))
+            $('.btn-export').attr('href', 'javascript:alert("excel正在生成，请稍候...");');
+            $.get(
+                    '{{ url()->current().'/export/'.$file }}',
+                    function(res){
+                        if(res.status){
+                            $('.btn-export').attr('href', res.path);
+                        } else {
+                            alert(res.msg);
+                        }
+                    }
+            );
+            @endif
+
+        });
+    </script>
+@endsection

@@ -1,0 +1,32 @@
+<!-- JAVASCRIPTS -->
+<!-- JQUERY -->
+<script src="{{ asset('assets/js/datatables/media/js/jquery-1.12.0.min.js') }}"></script>
+<!-- JQUERY UI-->
+<script src="{{ asset('assets/js/jquery-ui-1.10.3.custom/js/jquery-ui-1.10.3.custom.min.js') }}"></script>
+<!-- BOOTSTRAP -->
+<script src="{{ asset('assets/bootstrap-dist/js/bootstrap.min.js') }}"></script>
+<!-- BOOTSTRAP VALIDATION -->
+<script src="{{ asset('assets/js/bootstrapValidator.min.js') }}"></script>
+<!-- SLIMSCROLL -->
+<script type="text/javascript" src="{{ asset('assets/js/jQuery-slimScroll-1.3.0/jquery.slimscroll.min.js') }}"></script>
+<script type="text/javascript" src="{{ asset('assets/js/jQuery-slimScroll-1.3.0/slimScrollHorizontal.min.js') }}"></script>
+<!-- BLOCK UI -->
+<script type="text/javascript" src="{{ asset('assets/js/jQuery-BlockUI/jquery.blockUI.min.js') }}"></script>
+<!-- SELECT -->
+<script type="text/javascript" src="{{ asset('assets/js/select2/select2.min.js') }}"></script>
+<!-- DATA TABLES -->
+<script type="text/javascript" src="{{ asset('assets/js/datatables/media/js/jquery.dataTable.js') }}"></script>
+<script type="text/javascript" src="{{ asset('assets/js/datatables/media/assets/js/datatables.min.js') }}"></script>
+<!-- COOKIE -->
+<script type="text/javascript" src="{{ asset('assets/js/jQuery-Cookie/jquery.cookie.min.js') }}"></script>
+<!-- CUSTOM SCRIPT -->
+<script type="text/javascript" src="{{ asset('assets/js/scriptother.js') }}"></script>
+<script type="text/javascript" src="{{ asset('assets/js/bootstrap-datetimepicker.min.js') }}"></script>
+<script>
+    //页面加载完成时
+    jQuery(document).ready(function() {
+        App.setPage("dynamic_table");  //Set current page
+        App.init(); //Initialise plugins and elements
+    });
+</script>
+<!-- /JAVASCRIPTS -->

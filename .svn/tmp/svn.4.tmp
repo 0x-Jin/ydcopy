@@ -1,0 +1,155 @@
+<html>
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+        <meta name="description" content="">
+        <meta name="author" content="">
+        <title>益丰电商管理系统 | 破损登记</title>
+        <link rel="stylesheet" type="text/css" href="{{ asset('assets/css/cloud-admin.css') }}" >
+        <link rel="stylesheet" type="text/css" href="{{ asset('assets/css/themes/default.css') }}" id="skin-switcher" >
+        <link rel="stylesheet" type="text/css" href="{{ asset('assets/css/responsive.css') }}" >
+
+        <!-- STYLESHEETS --><!--[if lt IE 9]>
+        <script src="{{ asset('assets/js/flot/excanvas.min.js') }}"></script>
+        <script src="{{ asset('assets/js/html5.js') }}"></script>
+        <script src="{{ asset('assets/js/css3-mediaqueries.js') }}"></script>
+        <![endif]-->
+
+        <link rel="stylesheet" type="text/css" href="{{ asset('assets/font-awesome/css/font-awesome.min.css') }}">
+        <!-- ANIMATE -->
+        <link rel="stylesheet" type="text/css" href="{{ asset('assets/css/animatecss/animate.min.css') }}" />
+        <!-- JQUERY UI-->
+        <link rel="stylesheet" type="text/css" href="{{ asset('assets/js/jquery-ui-1.10.3.custom/css/custom-theme/jquery-ui-1.10.3.custom.min.css') }}" />
+        <!-- SELECT -->
+        <link rel="stylesheet" type="text/css" href="{{ asset('assets/js/select2/select2.min.css') }}" />
+        <link rel="stylesheet" type="text/css" href="{{ asset('assets/js/gritter/css/jquery.gritter.css') }}" />
+
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="{{ asset('assets/js/bootstrap-table/bootstrap-table.min.css') }}">
+        <!-- FONTS -->
+        <link rel="stylesheet" type="text/css" href="{{ asset('assets/css/css.css')}}?family=Open+Sans:300,400,600,700">
+        <!-- FileUplod -->
+        <link rel="stylesheet" href="{{ asset('assets/js/jquery-upload/css/jquery.fileupload.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ asset('assets/css/bootstrap-datetimepicker.min.css') }}" />
+    <body>
+        {{ asset('assets/css/bootstrap-datetimepicker.min.css') }}
+        <div class="modal-dialog" style="width: 1700px;">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="main">
+                        <div class="form-group">
+                            <label for="title" class=" col-md-1 col-md-title">配货单:</label>
+                            <label for="title" class="control-label col-md-3" style="padding:0 10px 0 0;">
+                                {{$single->shipment_id}}
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="title" class=" col-md-1 col-md-title">配货单信息:</label>
+                            <table id="maintable" class="table" style="width: 90%;">
+                                @if($single)
+                                <tr>
+                                    <th style="font-size: 12px;">店铺名称</th>
+                                    <th style="font-size: 12px;">交易号</th>
+                                    <th style="font-size: 12px;">客户姓名</th>
+                                    <th style="font-size: 12px;">电话</th>
+                                    <th style="font-size: 12px;">地址</th>
+                                    <th style="font-size: 12px;">快递公司</th>
+                                    <th style="font-size: 12px;">快递单号</th>
+                                    <th style="font-size: 12px;">是否货到付款</th>
+                                    <th style="font-size: 12px;">货到付款单号</th>
+                                </tr>
+                                @endif
+                                <tr>
+                                    <td>{{$single->shopname}}</td>
+                                    <td>{{$single->trade_id}}</td>
+                                    <td>{{$single->customer}}</td>
+                                    <td>{{$single->tellphone}}</td>
+                                    <td>{{$single->address}}</td>
+                                    <td>{{$single->delivery_company}}</td>
+                                    <td>{{$single->delivery_id}}</td>
+                                    <td>@if($single->is_cod)是@else否@endif</td>
+                                    <td>{{$single->cod_num}}</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="title" class=" col-md-1 col-md-title">破损商品信息：</label>
+                            <table id="detailtable" class="table">
+                                <tr>
+                                    <th  style="font-size: 12px;">商品编码*</th>
+                                    <th style="font-size: 12px;">规格编码*</th>
+                                    <th style="font-size: 12px;">商品名称*</th>
+                                    <th style="font-size: 12px;">数量*</th>
+                                    <th style="font-size: 12px;">销售单价*</th>
+                                    <th style="font-size: 12px;">有无实物返回*</th>
+                                    <th style="font-size: 12px;">原因*</th>
+                                    <th style="font-size: 12px;">责任方*</th>
+                                </tr>
+                                <!-- 初始化待更新的部分  update 作为标记 其他直接添加 -->
+                                @foreach($detail as $k=>$good)
+                                <tr>
+                                    <td>{{$good->good_bn}}</td>
+                                    <td>{{$good->spec_bn}}</td>
+                                    <td>{{$good->good_name}}</td>
+                                    <td>{{$good->number}}</td>
+                                    <td>{{$good->sale_price}}元</td>
+                                    <td>
+                                        @if($good->is_return == 1)无实物返回@endif
+                                        @if($good->is_return != 1)有实物返回@endif
+                                    </td>
+                                    <td>
+                                        @if($good->reason == 1)快递运输途中破损@endif
+                                        @if($good->reason == 2)快递运输途中丢件@endif
+                                        @if($good->reason == 3)仓库发货无物流信息@endif
+                                        @if($good->reason == 4)仓库错发 @endif
+                                        @if($good->reason == 5)仓库少发@endif
+                                        @if($good->reason == 6)商品质量问题@endif
+                                        @if($good->reason == 7)运营问题@endif
+                                        @if($good->reason == 8)客服问题@endif
+                                        @if($good->reason == 9)其他(备注说明)@endif
+                                    </td>
+                                    <td>
+                                        @if($good->assumed_person == 1)圆通@endif
+                                        @if($good->assumed_person == 2)中通@endif
+                                        @if($good->assumed_person == 3)京东@endif
+                                        @if($good->assumed_person == 4)顺丰@endif
+                                        @if($good->assumed_person == 5)客服@endif
+                                        @if($good->assumed_person == 6)仓库@endif
+                                        @if($good->assumed_person == 7)运营@endif
+                                        @if($good->assumed_person == 8)公司@endif
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </table>
+                        </div>
+                        <div class="form-group">
+                            <label for="title" class=" col-md-1 col-md-title">承担金额:</label>
+                            <label for="title" class="control-label col-md-1">
+                                @if($single->assumed_ratio == 1)全额承担@endif
+                                @if($single->assumed_ratio != 1)部分承担@endif
+                            </label>
+                            <label for="title" class="control-label col-md-1">
+                                {{$single->assumed_sum}}元
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label for="title" class=" col-md-1 col-md-title">备注说明:</label>
+                            <label for="title" class="col-md-8">
+                                {{$single->comment}}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+
+
+
+
+
+

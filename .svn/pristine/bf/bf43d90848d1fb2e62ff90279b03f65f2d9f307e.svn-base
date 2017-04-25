@@ -1,0 +1,116 @@
+<?php
+namespace App\PageService\Admin\Goods;
+
+use App\PageService\PageService;
+use Curl;
+
+
+class Tel extends PageService {
+
+
+    protected  function _genSql($params, $dbConfig='sqlsvr'){
+        if($dbConfig == 'sqlsrv'){
+            $keyWordWhere = empty($params['keyWord']) ? "" : "AND ProductName like '%{$params['keyWord']}%'";
+            $skuCodeWhere = empty($params['skuCode']) ? "" : "AND skuCode = '{$params['skuCode']}'";
+            $platWhere = empty($params['platForm']) ? "" : "AND shopCode = '{$params['platForm']}'";
+            $orderIdWhere = $keyWordWhere || $skuCodeWhere ?
+                            "AND Order_ID in (
+                                select
+                                    distinct SalesOrderHeaderId
+                                from
+                                SalesOrderLine
+                                where 1 = 1 {$keyWordWhere} {$skuCodeWhere}
+                            )"
+                            : "";
+            $sql = "
+              select distinct ConsigneeMobile
+              from SalesOrder
+              where
+                  CreateDate between '{$params['start']} 00:00:00.000' and '{$params['end']} 23:59:59.999'
+                  {$platWhere} {$orderIdWhere}
+            ";
+        } else {
+            $dpmc = config('self.select.dpmc.opts')[$params['platForm']];
+
+            $keyWordWhere = empty($params['keyWord']) ? "" : "AND a.TB_SPMC like '%{$params['keyWord']}%'";
+            $skuCodeWhere = empty($params['skuCode']) ? "" : "AND b.skudm = '{$params['skuCode']}'";
+            $platWhere = empty($params['platForm']) ? "" : "AND dpmc = '{$dpmc}'";
+            $orderIdWhere = $keyWordWhere || $skuCodeWhere ?
+                "and GUID in (
+                  select
+                      distinct FGUID
+                  from DDSPMX
+                  left join spsku b on a.sku_guid=b.guid
+                  where
+                      1 = 1 {$keyWordWhere} {$skuCodeWhere}
+                )"
+                : "";
+            $sql = "
+            select distinct SHRSJ from DD
+            where
+                SHRSJ!='null' and SHRSJ!='' and ZJE>'0'
+                and RQ>'{$params['start']} 00:00:00.000' and RQ<'{$params['end']} 23:59:59.999'
+                {$platWhere} {$orderIdWhere}
+            union
+            select distinct SHRSJ from DD_Archive
+            where
+                SHRSJ!='null' and SHRSJ!='' and ZJE>'0'
+                and RQ>'{$params['start']} 00:00:00.000' and RQ<'{$params['end']} 23:59:59.999'
+                {$platWhere} {$orderIdWhere}
+            ";
+        }
+        return $sql;
+    }
+
+    protected function _queryDB($params, $path, $strQuery){
+        if( strtotime($params['end']) < strtotime('2015-12-01') ){
+            $dbConfig = 'sqlsrv_old';
+            $rt = $this->_query($params, $dbConfig);
+        } elseif( strtotime($params['start']) >strtotime('2015-12-01') ){
+            $dbConfig = 'sqlsrv';
+            $rt = $this->_query($params, $dbConfig);
+        } else {
+            $dbConfig = 'sqlsrv_old';
+            $rtOld = $this->_query($params, $dbConfig);
+
+            $dbConfig = 'sqlsrv';
+            $rtNew = $this->_query($params, $dbConfig);
+
+            $rt = array_collapse(array_unique([$rtOld, $rtNew]));
+        }
+        if(! empty($rt)){
+            $content = serialize($rt);
+            $this->_putQueryLog($path, $content, $strQuery);
+        }
+        return $rt;
+
+    }
+
+    protected function _query($params, $dbConfig){
+        $sql = $this->_genSql($params, $dbConfig);
+        $rt = $this->_select($sql, $dbConfig);
+        return call_user_func_array(array($this, '_fmtData'), [$rt, $dbConfig]);
+    }
+
+    protected function _fmtData($rawData, $dbConfig='sqlsrv'){
+        if( empty($rawData) || count($rawData) == 0) return [];
+
+        if($dbConfig == 'sqlsrv'){
+            $postStr = '';
+            foreach($rawData as $row){
+                $postStr.= $row['ConsigneeMobile']."\r\n";
+            }
+            $response = Curl::to('http://192.168.228.189:8080/Default.aspx')->withData(['mobile_nums'=>$postStr])->post();
+            $pattern = '/(?is)<textarea id="res_mobile_nums".*?>(.*)?<\/textarea>/';
+            preg_match($pattern, $response, $matches, PREG_OFFSET_CAPTURE, 3);
+            $fmtData = explode("\r\n",trim($matches[1][0]));
+        } else {
+            foreach($rawData as $row){
+                $fmtData[] = $row['SHRSJ'];
+            }
+        }
+        $l = count($fmtData);
+        $fmtData = array_merge($fmtData, array_fill($l, 5-$l%5, ''));
+        return $fmtData;
+    }
+}

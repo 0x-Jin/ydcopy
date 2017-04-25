@@ -1,0 +1,180 @@
+<div class="modal-dialog" style="width: 1700px;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">工具管理>破损登记>添加破损</h4>
+        </div>
+        <div class="modal-body">
+            <div class="main">
+                {!! Form::open(array('url'=>'/tool/damagedoadd','class'=>'form-horizontal','id'=>'interviewForm')) !!}
+                <input type='hidden' name='is_cod' id='is_cod' />
+                <input type='hidden' name='cod_num' id='cod_num' />
+                <input type='hidden' name='shipment_status' id='shipment_status' />
+                
+                <div class="form-group">
+                    <label for="title" class=" col-md-1 col-md-title">配货单:</label>
+                    <label for="title" class="control-label col-md-3">
+                        <input type="text" id="shipmentno" name="shipmentno" class="form-control"  />
+                    </label>
+                    <button type='button' class="btn" id="importbtn">
+                          <i class="fa"></i>&nbsp;导入配货单信息
+                    </button>
+                </div>
+                
+                <div class="form-group">
+                    <label for="title" class=" col-md-1 col-md-title">配货单信息:</label>
+                        <table id="maintable" class="table">
+                            
+                        </table>
+                </div>
+                
+                <div class="form-group">
+                    <label for="title" class=" col-md-1 col-md-title">破损商品信息：</label>
+                        <table id="detailtable" class="table">
+                            
+                        </table>
+                </div>
+                
+                <div class="form-group">
+                    <label for="title" class="col-md-4 col-md-title">承担金额:</label>
+                    <label for="title" class="control-label col-md-4">
+                        <select class="form-control" name="assumed_ratio">
+                            <option value="">请选择承担比例</option>
+                            <option value="1">全额承担</option>
+                            <option valeu="0">部分承担</option>
+                        </select>
+                    </label>
+                    <label for="title" class="control-label col-md-4">
+                        <input type="text" name="assumed_sum" id="shipmentno" class="form-control"  />
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                   <label for="title" class="col-md-title col-md-4">备注说明:</label>
+                    <label for="title" class="col-md-8">
+                         <textarea class="form-control" id="comment" name="comment"></textarea>
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="title" class="col-md-8">
+                        <button type='submit' class="btn">
+                              <i class="fa"></i>&nbsp;提交
+                        </button>
+                    </label>
+                </div>
+                  
+               {!! Form::close() !!}
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    
+    
+    //保证每行数据都是对应的
+    var cursor = 0;
+    function updateHTML(data){
+        
+        var main = data.main;
+        
+        var detail = data.detail;
+        
+        var mainhtml = "<tr><th>店铺名称</th><th>交易号</th><th>客户姓名</th><th>电话</th><th>地址</th><th>快递公司</th><th>快递单号</th></tr>";
+        
+        mainhtml += "<tr>";
+        
+        mainhtml += "<td><input type='hidden' name='shopname' value='"+main[0].ShopName+"'/>"+main[0].ShopName+"</td>";
+        
+        mainhtml += "<td><input type='hidden' name='trade_id' value='"+main[0].Code+"'/>"+main[0].Code+"</td>";
+        
+        mainhtml += "<td><input type='hidden' name='customer' value='"+main[0].ConsigneeName+"'/>"+main[0].ConsigneeName+"</td>";
+        
+        
+        mainhtml += "<td><input type='hidden' name='tellphone' value='"+main[0].ConsigneeTelephone+"'/>"+main[0].ConsigneeTelephone+"</td>";
+        
+        
+        mainhtml += "<td><input type='hidden' name='address' value='"+main[0].ConsigneeAddress+"'/>"+main[0].ConsigneeAddress+"</td>";
+        
+        mainhtml += "<td><input type='hidden' name='delivery_company' value='"+main[0].ExpressNameActual+"'/>"+main[0].ExpressNameActual+"</td>";
+        
+        mainhtml += "<td><input type='hidden' name='delivery_id' value='"+main[0].ExpressNumber+"'/>"+main[0].ExpressNumber+"</td>";
+
+        mainhtml += "</tr>";
+        
+        $('#is_cod').val(main[0].IsCod);
+        $('#cod_num').val(main[0].CodNo);
+        $('#shipment_status').val(main[0].DispatchStatus);
+        
+        $('#maintable').html(mainhtml);
+        
+        var detailhtml = '<tr><th>商品编码*</th><th>规格编码*</th><th>商品名称*</th><th>数量*</th><th>销售单价*</th><th>有无实物返回*</th><th>原因*</th><th>责任方*</th><th>操作</th></tr>';
+        
+        for(var single in detail){
+            cursor++;
+            detailhtml += "<tr>";
+            detailhtml += "<td><input name='good_bn["+single+"]' value='"+detail[single].ProductCode+"'  /></td>";
+            detailhtml += "<td><input name='spec_bn["+single+"]' value='"+detail[single].ProductSkuCode+"'/></td>";
+            detailhtml += "<td><input name='good_name["+single+"]' value='"+detail[single].ProductName+"'/></td>";
+            detailhtml += "<td><input  name='number["+single+"]' value='"+detail[single].DispatchQuantity+"'/></td>";
+            detailhtml += "<td><input name='sale_price["+single+"]' value='"+detail[single].PriceSelling+"'/></td>";
+            detailhtml += "<td><select name='is_return["+single+"]'><option value=''>请选择</option><option value='0'>无实物返回</option><option value='1'>有实物返回</option></select></td>";
+            detailhtml += "<td><select name='reason["+single+"]'><option value=''>请选择原因</option><option value='1'>快递运输途中破损</option><option value='2'>快递运输途中丢件</option><option value='3'>仓库发货无物流信息</option><option value='4'>仓库错发</option><option value='5'>仓库少发</option><option value='6'>商品质量问题</option><option value='7'>运营问题</option><option value='8'>客服问题</option><option value='9'>其他(备注说明)</option></select></td>";
+            detailhtml += "<td><select name='assumed_person["+single+"]'><option value=''>请选择责任方</option><option value='1'>圆通</option><option value='2'>中通</option><option value='3'>京东</option><option value='4'>顺丰</option><option value='5'>客服</option><option value='6'>仓库</option><option value='7'>运营</option><option value='8'>公司</option></select></td>";
+            detailhtml += "<td><span onclick='delrow(this);'>删除</span>|<span onclick='addrow(this);'>添加</span></td></tr>";
+        }
+        $('#detailtable').html(detailhtml);
+    }
+    
+    //添加一行数据操作：在当前行的下方加入：
+    function addrow(obj){
+        var html = '<tr>';
+        html += '<td><input name="good_bn['+cursor+']" /></td>';
+        html += '<td><input name="spec_bn['+cursor+']"></td>';
+        html += '<td><input name="good_name['+cursor+']"></td>';
+        html += '<td><input name="number['+cursor+']"></td>';
+        html += '<td><input name="sale_price['+cursor+']"></td>';
+        html += '<td><input name="is_return['+cursor+']"></td>';
+        html += '<td><input name="reason['+cursor+']"></td>';
+        html += '<td><input name="assumed_person['+cursor+']"></td>';
+        html += '<td><span onclick="delrow(this);">删除</span>|<span onclick="addrow(this);">添加</span></td></tr>';
+        html += "</tr>";
+        $(obj).parent().parent().after(html);
+        cursor++;
+    }
+    
+    //删除一行数据:
+    function delrow(obj){
+        $(obj).parent().parent().remove();
+    }
+    
+     var import_url = '/ydcopy/tool/damageimport';
+    
+    //导入 点击触发
+    $('#importbtn').click(function(){
+        var no = $('#shipmentno').val();
+        if(no == '') { alert('配货单号不能为空'); return; }
+        
+        $.ajax({
+             type: "POST",
+             url: import_url,
+             data: {no:no,_token:index_ajax_token},
+             dataType: "json",
+             success: function(data){
+                 if(data.status){//成功处理
+                     updateHTML(data.data);
+                 }else{//失败处理
+                     
+                }
+             }
+         });
+    });
+    
+    //检验所有数据是否为空!!!
+
+</script>
+
+
+
+
+

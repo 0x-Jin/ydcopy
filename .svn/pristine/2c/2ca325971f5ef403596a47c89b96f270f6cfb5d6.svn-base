@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Plat;
+
+use App\Http\Requests\Admin\Plat\SaleRequest as Request;
+use App\Http\Controllers\Controller;
+use App\PageService\Admin\Plat\Sale as PageService;
+use URL;
+
+class SaleController extends Controller {
+    public function index(PageService $pageService){
+        $viewData = [
+            'extra'  => [
+                'currentCtrl' => $this->getCutCtrlPath(),
+                'exportUrl' => 'javascript:alert("请先查询");',
+            ],
+        ];
+        return view($this->getCutCtrlPath(), $viewData);
+    }
+
+    public function post(Request $request, PageService $pageService, $from='file'){
+        $params = $request->except('_token');
+        $request->flashExcept('_token');
+
+        $data = $params ? $pageService->getData($params, $from) : [];
+
+        $exportUrl = URL::action($this->getCutCtrlPath().'Controller@export', [$pageService->dataPath]);
+        $viewData = [
+            'table'  => $data,
+            'extra'  => [
+                'currentCtrl'   => $this->getCutCtrlPath(),
+                'exportUrl'     => $exportUrl,
+                'showTbFoot'    => true,
+            ],
+        ];
+
+        $view = view($this->getCutCtrlPath(), $viewData);
+        if(empty($data)){
+            $view->withErrors(['未找到数据']);
+        }
+        return $view;
+    }
+
+    public function export(PageService $pageService, $file){
+        if(empty($file)){
+            back()->withInput(['errors', ['请先查询']]);
+        }
+        $path = sprintf('Cache/%s/Data/%s', $this->getCutCtrlPath('/'), $file);
+        $arrData = $pageService->_queryFile($path);
+
+        if(empty($arrData)){
+            back()->withInput(['errors', ['非法查询']]);
+        }
+        $pageService->export($path, $arrData);
+    }
+}

@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Http\Requests\Admin\Customer;
+
+use App\Http\Requests\Request;
+
+class CountRequest extends Request
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize()
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules()
+    {
+        return [
+            'mathStart'     => 'required|before:mathEnd',
+            'mathEnd'       => 'required|after:mathStart',
+
+            'compareStart'   => 'required|before:compareEnd',
+            'compareEnd'     => 'required|after:compareStart',
+
+            'platForm'      => 'required',
+            'timeType'      => 'required',
+        ];
+    }
+
+    public function messages(){
+        return [
+            'mathStart.required'    => '请输入统计开始时间',
+            'mathEnd.required'      => '请输入统计截止时间',
+            'compareStart.required' => '请输入参考开始时间',
+            'compareEnd.required'   => '请输入参考截止时间',
+
+            'platForm.required'     => '请选择店铺',
+            'timeType.required'     => '请选择时间类型',
+        ];
+    }
+}

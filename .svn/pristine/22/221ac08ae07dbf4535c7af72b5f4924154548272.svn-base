@@ -1,0 +1,25 @@
+language: php
+
+php:
+  - 5.4
+  - 5.5
+  - 5.6
+  - hhvm
+
+install:
+  - travis_retry composer install --no-interaction --prefer-source
+
+before_script:
+  - mkdir -p build/logs
+  - bash -c 'if [ "$TRAVIS_PHP_VERSION" == "hhvm-nightly" ]; then rm phpunit.xml.dist; fi;'
+  - bash -c 'if [ "$TRAVIS_PHP_VERSION" == "hhvm-nightly" ]; then mv phpunit.hhvm.xml.dist phpunit.xml.dist; fi;'
+
+script:
+  - bash -c 'if [ "$TRAVIS_PHP_VERSION" == "hhvm-nightly" ]; then vendor/bin/phpunit; fi;'
+  - bash -c 'if [ "$TRAVIS_PHP_VERSION" != "hhvm-nightly" ]; then vendor/bin/phpunit --coverage-clover=coverage.clover; fi;'
+  - bash -c 'if [ "$TRAVIS_PHP_VERSION" != "hhvm-nightly" ]; then vendor/bin/phpcs src -p --standard=psr2; fi;'
+  - bash -c 'if [ "$TRAVIS_PHP_VERSION" != "hhvm-nightly" ]; then vendor/bin/php-cs-fixer --dry-run -vv fix; fi;'
+
+after_script:
+  - bash -c 'if [ "$TRAVIS_PHP_VERSION" != "hhvm-nightly" ]; then wget https://scrutinizer-ci.com/ocular.phar; fi;'
+  - bash -c 'if [ "$TRAVIS_PHP_VERSION" != "hhvm-nightly" ]; then php ocular.phar code-coverage:upload --format=php-clover coverage.clover; fi;'

@@ -1,0 +1,74 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use App\Models\Admin\Task\Express;
+use App\Api\Kdniao;
+
+class UpdateExpressTrace extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'update:express_trace';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'update the express trace info from KuaiDiNiao';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle(Express $mdlExpress, Kdniao $Kdniao){
+        $data = $mdlExpress->where('status', '0')->get();
+        $ListCode = config('kdniao.Code');
+        $reqData = [];
+
+        $this->output->progressStart(count($data));
+        foreach($data as $row){
+            if(!array_key_exists($row['ExpressNameActual'], $ListCode)){
+                logger('KdNiao.error', ['no'=>$row['ExpressNumber'], 'res'=>'不支持的快递', 'code'=>$row['ExpressNameActual']]);
+                continue;
+            }
+            $code = $ListCode[$row['ExpressNameActual']];
+            $reqData[0] = [
+                'Code' => $code,
+                'Item' => [
+                    [
+                        'Bk'=>'yfdyf',
+                        'No'=>$row['ExpressNumber']
+                    ]
+                ],
+            ];
+            $reqJson = json_encode($reqData);
+            $responseJson = $Kdniao->subscribe($reqJson);
+            $rtArr = json_decode($responseJson, true);
+            if($rtArr['Success']){
+                $row->status = 1;
+                $row->save();
+            } else {
+                logger('KdNiao', ['no'=>$row['ExpressNumber'], 'res'=>$responseJson]);
+            }
+            $this->output->progressAdvance();
+        }
+        $this->output->progressFinish();
+    }
+}

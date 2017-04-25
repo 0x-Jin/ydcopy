@@ -1,0 +1,144 @@
+<?php
+namespace App\Models\Admin\Plat;
+
+use App\Models\Admin\ModelWithoutMysql;
+
+class Sale extends ModelWithoutMysql {
+
+
+    protected  function _genSql($params){
+        $aRecordWhere = $bRecordWhere = $dRecordWhere = '';
+        $aCreateWhere = $bCreateWhere = $dCreateWhere = '';
+        $aPlatWhere = $bPlatWhere = $dPlatWhere = '';
+        $aDeliverWhere = $bDeliverWhere = $dDeliverWhere = '';
+        $aPayWhere = $bPayWhere = $dPayWhere = '';
+
+        if(!empty($params['recordEnd']) ){
+            $aRecordWhere = sprintf("and a.recordDate between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['recordStart'], $params['recordEnd']);
+            $bRecordWhere = sprintf("and b.recordDate between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['recordStart'], $params['recordEnd']);
+            $dRecordWhere = sprintf("and d.recordDate between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['recordStart'], $params['recordEnd']);
+        }
+
+        if( !empty($params['createEnd']) ) {
+            $aCreateWhere = sprintf("and a.CREATEDATE between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['createStart'], $params['createEnd']);
+            $bCreateWhere = sprintf("and b.CREATEDATE between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['createStart'], $params['createEnd']);
+            $dCreateWhere = sprintf("and d.CREATEDATE between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['createStart'], $params['createEnd']);
+        }
+
+        if( !empty($params['platEnd']) ) {
+            $aPlatWhere = sprintf("and a.PLATDELIVERYDATE between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['platStart'], $params['platEnd']);
+            $bPlatWhere = sprintf("and b.PLATDELIVERYDATE between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['platStart'], $params['platEnd']);
+            $dPlatWhere = sprintf("and d.PLATDELIVERYDATE between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['platStart'], $params['platEnd']);
+        }
+
+        if( !empty($params['deliverEnd']) ) {
+            $aDeliverWhere = sprintf("and a.DELIVERYDATE between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['deliverStart'], $params['deliverEnd']);
+            $bDeliverWhere = sprintf("and b.DELIVERYDATE between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['deliverStart'], $params['deliverEnd']);
+            $dDeliverWhere = sprintf("and d.DELIVERYDATE between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['deliverStart'], $params['deliverEnd']);
+        }
+
+        if( !empty($params['payEnd']) ) {
+            $aPayWhere = sprintf("and a.PayDate between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['payStart'], $params['payEnd']);
+            $bPayWhere = sprintf("and b.PayDate between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['payStart'], $params['payEnd']);
+            $dPayWhere = sprintf("and d.PayDate between '%s 00:00:00.000' and '%s 23:59:59.000'", $params['payStart'], $params['payEnd']);
+        }
+
+
+        $aIsObSoleteWhere = empty($params['isObSolete']) ? 'and a.isObsolete = 0' : "";
+        $bIsObSoleteWhere = empty($params['isObSolete']) ? 'and b.isObsolete = 0' : "";
+        $dIsObSoleteWhere = empty($params['isObSolete']) ? 'and d.isObsolete = 0' : "";
+
+        $aPlatFormWhere = $params['platForm'] ? "and a.ShopCode = '{$params['platForm']}'" : '';
+
+        //兼容JS，每个值-1
+        $aTransTypeWhere = $params['orderType'] ? 'and a.transType = '.($params['orderType']-1) : '';
+        $bTransTypeWhere = $params['orderType'] ? 'and b.transType = '.($params['orderType']-1) : '';
+        $dTransTypeWhere = $params['orderType'] ? 'and d.transType = '.($params['orderType']-1) : '';
+
+        return "
+        select
+    店铺名称, 商品金额, 折后商品金额,  商品折让金额, 支付金额, 邮费, 商品数量, 订单数, 订单人数,
+    '' as 客单价, '' as 平均订单价, '' as 件单价, '' as 客件数, 动销商品数, 折让金额, 明细商品总数
+from
+(
+	select
+      a.ShopCode, a.ShopName as 店铺名称, SUM(a.Express_Fee) as 邮费, SUM(a.Quantity) as 商品数量, SUM(a.PayAmount) as 支付金额,
+      SUM(a.MKAmount) as 折让金额, count(distinct a.MemberCode) as 订单人数, COUNT(a.Order_ID) as 订单数
+	from
+	    SalesOrder a with(nolock)
+	where
+      1 = 1
+      {$aPlatFormWhere} {$aIsObSoleteWhere} {$aTransTypeWhere} {$aRecordWhere} {$aCreateWhere} {$aPlatWhere} {$aDeliverWhere} {$aPayWhere}
+	group by a.ShopCode, a.ShopName
+) e
+left join
+(
+	select
+	    SUM(c.AMOUNTACTUAL) as 折后商品金额, SUM(c.Amount) as 商品金额, SUM(c.DiscountAmount) as 商品折让金额, SUM(c.Quantity) as 明细商品总数,d.ShopCode
+	from
+	    SalesOrderLine c with(nolock)
+	left join SalesOrder d with(nolock) on c.SalesOrderHeaderId=d.Order_ID
+	where
+	    c.IsDeleted = 0 and 1 = 1
+      {$dIsObSoleteWhere} {$dTransTypeWhere} {$dRecordWhere} {$dCreateWhere} {$dPlatWhere} {$dDeliverWhere} {$dPayWhere}
+	group by d.ShopCode
+) f on e.ShopCode=f.ShopCode
+left join
+(
+	select COUNT(distinct a.SkuCode) as 动销商品数,b.ShopCode
+	from  SalesOrderLine a with(nolock) left join SalesOrder b with(nolock) on a.SalesOrderHeaderId=b.Order_ID
+	where
+	    1 = 1
+      {$bIsObSoleteWhere} {$bTransTypeWhere} {$bRecordWhere} {$bCreateWhere} {$bPlatWhere} {$bDeliverWhere} {$bPayWhere}
+	group by b.ShopCode
+) g on e.ShopCode=g.ShopCode";
+    }
+
+    protected function _fmtData($rawData){
+        $totalA = $totalB = $totalC =
+        $totalD = $totalE = $totalF =
+        $totalH = $totalI = $totalN =
+        $totalO = $totalP = 0;
+
+
+        foreach($rawData as &$row){
+            $row['客单价'] = round($row['支付金额']/$row['订单人数'], 2);
+            $row['件单价'] = round($row['商品金额']/$row['商品数量'], 2);
+            $row['客件数'] = round($row['商品数量']/$row['订单数'], 2);
+            $row['平均订单价'] = round($row['支付金额']/$row['订单数'], 2);
+
+            $totalA+= $row['商品金额'];
+            $totalB+= $row['折后商品金额'];
+            $totalC+= $row['商品折让金额'];
+            $totalD+= $row['支付金额'];
+            $totalE+= $row['邮费'];
+            $totalF+= $row['商品数量'];
+            $totalH+= $row['订单数'];
+            $totalI+= $row['订单人数'];
+
+            $totalN+= $row['动销商品数'];
+            $totalO+= $row['折让金额'];
+            $totalP+= $row['明细商品总数'];
+        }
+        unset($row);
+        $rawData[] = array(
+            '店铺名称'		=> '合计',
+            '商品金额'   	=> $totalA,
+            '折后商品金额'  => $totalB,
+            '商品折让金额'  => $totalC,
+            '支付金额'  	=> $totalD,
+            '邮费'  		=> $totalE,
+            '商品数量'		=> $totalF,
+            '订单数'  		=> $totalH,
+            '订单人数'      => $totalI,
+            '客单价'  		=> '',
+            '平均订单价'  	=> '',
+            '件单价' 		=> '',
+            '客件数'	 	=> '',
+            '动销商品数'	=> $totalN,
+            '折让金额' 		=> $totalO,
+            '明细商品总数'	=> $totalP,
+        );
+        return $rawData;
+    }
+}

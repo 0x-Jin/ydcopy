@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use App\Models\Admin\Task\Express;
+
+class UpdateExpressTrace extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'update:express_trace';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = '更新物流跟踪信息';
+    protected $table = 'order_express';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle(Express $mdlExpress){
+//        $mdlExpress->where()->get();
+
+        $mysql = DB::connection('mysql');
+//        $this->output->progressStart(count($mssqlData));
+//        foreach($mssqlData as $row){
+//            $this->output->progressAdvance();
+//        }
+//        $this->output->progressFinish();
+    }
+}

@@ -1,0 +1,68 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use Excel;
+use App\Models\Admin\Goods\Principals as Model;
+use Log;
+
+class ImportGoodsPrincipals extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'import:goods_principals {file} {bn} {name} {principal}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'import goods principals';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle(Model $mdl){
+        $args = $this->argument();
+        $path = sprintf('%s/app/public/excel/%s', storage_path(), $args['file']);
+        $range = array_flip(range('A', 'Z'));
+
+        $excelData = Excel::load($path)->getSheet(0)->toArray();
+        array_shift($excelData);
+
+        $this->output->progressStart(count($excelData));
+        foreach($excelData as $i=>$row){
+            $bn         = $row[$range[$args['bn']]];
+            $name       = $row[$range[$args['name']]];
+            $principal  = $row[$range[$args['principal']]];
+            $saveData = ['bn'=>$bn, 'name'=>$name, 'principal'=>$principal];
+            $bool = $mdl->create($saveData);
+
+            if($bool){
+                $str = json_encode($saveData).'insert success!';
+                Log::info($str);
+            } else {
+                $str = json_encode($saveData).'insert failed!';
+                Log::error($str);
+            }
+            $this->output->progressAdvance();
+        }
+        $this->output->progressFinish();
+    }
+}

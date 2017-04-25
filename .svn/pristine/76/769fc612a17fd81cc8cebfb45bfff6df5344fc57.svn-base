@@ -1,0 +1,33 @@
+<?php
+namespace App\Models\Admin\Tool;
+
+use DB;
+
+class Store {
+
+
+    public function getData($params){
+        $sql = $this->_genSql($params);
+        $dbConfig = 'wms';
+        try{
+            DB::connection($dbConfig)->setFetchMode(2);
+            $rt =  DB::connection($dbConfig)->select($sql);
+        } catch(\Exception $e){
+            $rt = [];
+            Log::error($e->getMessage());
+        }
+        return ['total'=>count($rt), 'rows'=>$rt];
+    }
+
+    protected  function _genSql($params){
+        return "
+        --查询条件：规格代码
+        select
+            location_template, item,lot, ON_HAND_QTY, in_transit_qty, allocated_qty, suspense_qty,
+            aging_date,expiration_date,received_date,total_cost,location,item_desc
+        from location_inventory
+        where item='{$params['item']}' and warehouse='{$params['warehouse']}'
+        order by on_hand_qty desc";
+    }
+
+}

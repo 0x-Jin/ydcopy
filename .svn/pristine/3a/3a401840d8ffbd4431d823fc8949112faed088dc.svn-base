@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Customer;
+
+use Illuminate\Http\Request as Req;
+use App\Http\Controllers\Controller;
+use App\Models\Admin\Customer\Count as Mdl;
+
+
+class CountController extends Controller {
+
+
+    public function post(Req $req, Mdl $mdl){
+        $this->validate($req, [
+            'mathStart'     => 'required|before:mathEnd',
+            'mathEnd'       => 'required|after:mathStart',
+            'compareStart'  => 'required|before:compareEnd',
+            'compareEnd'    => 'required|after:compareStart|max_date:'.strtotime($req->mathStart),
+            'platForm'      => 'required',
+            'timeType'      => 'required',
+        ], [
+            'mathStart.required'    => '请输入统计开始时间',
+            'mathEnd.required'      => '请输入统计截止时间',
+            'compareStart.required' => '请输入参考开始时间',
+            'compareEnd.required'   => '请输入参考截止时间',
+            'compareEnd.max_date'   => '参考截止时间需早于统计开始时间',
+
+            'platForm.required'     => '请选择店铺',
+            'timeType.required'     => '请选择时间类型',
+        ]);
+
+        $from = $req->nocache ? 'db' : 'file';
+        $params = $req->except(['_token', 'nocache']);
+        $req->flashExcept('_token');
+
+        $data = $params ? $mdl->getData($params, $from) : [];
+        return view($this->getCurrentPath(), ['data'=>$data, 'file'=>$mdl->dataPath]);
+    }
+}

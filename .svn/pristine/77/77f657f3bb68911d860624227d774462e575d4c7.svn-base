@@ -1,0 +1,34 @@
+@extends('Admin.Layouts.master')
+@section('title', '会员复购率')
+@section('breadcrumb')
+    <li>会员报表</li>
+    <li class="active">会员复购率</li>
+@endsection
+@section('inputs')
+    <div class="form-group">
+        <label class="control-label">统计时间：</label>
+        {{ Form::input('text', 'mathStart', old('mathStart'), ['class'=>'form-control datepicker']) }}
+        <span class="add-on control-label">至</span>
+        {{ Form::input('text', 'mathEnd', old('mathEnd'), ['class'=>'form-control datepicker']) }}
+    </div>
+    <div class="form-group">
+        <label class="control-label">参考时间：</label>
+        {{ Form::input('text', 'compareStart', old('compareStart'), ['class'=>'form-control datepicker']) }}
+        <span class="add-on control-label">至</span>
+        {{ Form::input('text', 'compareEnd', old('compareEnd'), ['class'=>'form-control datepicker']) }}
+    </div>
+    <div class="form-group">
+        <label class="control-label">{{ Config::get('self.select.platForms.label') }}：</label>
+        {{ Form::select('platForm', Config::get('self.select.platForms.opts'), old('platForm'), ['class'=>'form-control', 'tabindex'=>'-1', 'aria-hidden'=>'true']) }}
+    </div>
+    <div class="form-group">
+        <label class="control-label">{{ Config::get('self.select.timeType.label') }}：</label>
+        {{ Form::select('timeType', Config::get('self.select.timeType.opts'), old('timeType'), ['class'=>'form-control', 'tabindex'=>'-1', 'aria-hidden'=>'true']) }}
+    </div>
+    <div class="form-group">
+        <label class="checkbox inline">
+            {{ Form::checkbox('isObSolete', 1, old('isObSolete')) }}包含作废订单
+        </label>
+    </div>
+@endsection
+

@@ -1,0 +1,61 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use DB;
+use Symfony\Component\VarDumper\Tests\VarClonerTest;
+
+class ImportGoodsStore extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'import:goods_store';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = '从SqlServer导入库存数据到Mysql';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle(){
+        $mssql = DB::connection('sqlsrv');
+        $mysql = DB::connection('mysql');
+
+        $mssql->setFetchMode(2);
+
+        $fields = ["WarehouseCode", "ProductSkuCode", "Quantity", "LockedQuantity", "ModifyTime"];
+        $fieldsStr = implode(",", $fields);
+        $valNum = implode(',', array_fill(0, count($fields), '?'));
+
+        $querySql = "select {$fieldsStr} from InventoryVirtual order by ProductSkuCode";
+
+        $mssqlData = $mssql->select($querySql);
+        $this->output->progressStart(count($mssqlData));
+        foreach($mssqlData as $row){
+            $insertSql = "insert into goods_store ($fieldsStr) VALUE ($valNum)";
+            $mysql->insert($insertSql, array_values($row));
+            $this->output->progressAdvance();
+        }
+        $this->output->progressFinish();
+    }
+}

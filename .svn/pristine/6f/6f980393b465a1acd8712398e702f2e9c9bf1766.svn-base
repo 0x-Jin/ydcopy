@@ -1,0 +1,93 @@
+<?php
+
+namespace App\Models\Admin\Task;
+
+use Illuminate\Database\Eloquent\Model;
+use App\Api\Kdniao;
+use DB;
+
+class Express extends Model {
+
+    protected $table = 'admin_order_express';
+    protected $dateFormat = 'U';
+    protected $fillable = [
+        'OdCode',
+        'TradeId',
+        'ActuallyPaid',
+        'ReceivableAmounts',
+        'DispatchStatus',
+        'ExpressNameActual',
+        'ExpressNumber',
+        'IsCod',
+        'TotalProductQuantity',
+        'ShopName',
+        'PayTime',
+        'OperateTime',
+        'DeliveryDate',
+        'BUYERMEMO',
+        'SELLERMEMO',
+        'PLATFORMMEMO',
+        'REMARK',
+        'status',
+    ];
+
+
+    public function trace($bn){
+        $Kdniao = new Kdniao();
+
+        $mdl = $this->where('ExpressNumber', $bn)->first();
+
+        $ListCode = config('kdniao.Code');
+        if(!array_key_exists($mdl->ExpressNameActual, $ListCode)){
+            logger('KdNiao.error', ['no'=>$bn, 'res'=>'不支持的快递', 'code'=>$mdl->ExpressNameActual]);
+            return ['status'=>0, 'msg'=>'不支持的快递'];
+        }
+        $code = $ListCode[$mdl->ExpressNameActual];
+        $responseJson = $Kdniao->search($code, $bn);
+        $rtArr = json_decode($responseJson, true);
+
+        if($rtArr['Success']){
+            if($rtArr['Reason']){
+                $mdl->status = 4;
+                $mdl->reason = $rtArr['Reason'];
+            } else {
+                $mdl->status = isset($rtArr['State']) ? $rtArr['State'] : 2;
+                $mdl->express_trace = json_encode($rtArr['Traces']);
+            }
+            $mdl->save();
+            return ['status'=>1, 'msg'=>'更新成功'];
+        } else {
+            return ['status'=>0, 'msg'=>'api数据未找到'];
+            logger('KdNiao.trace.error', ['no'=>$bn, 'res'=>$responseJson, 'from'=>'model Express trace']);
+        }
+    }
+
+    /**
+     * 接受快递鸟物流推送信息
+     */
+    public function receive($receiveData){
+        $codes = $setStatus = $setTrace = "";
+        foreach($receiveData['Data'] as $items){
+            //物流状态: 0默认，1-已订阅，2-在途中，3-签收,4-问题件
+            $codes .= sprintf("'%s',", $items['LogisticCode']);
+            $setStatus .= sprintf("WHEN '%s' THEN %d ", $items['LogisticCode'], isset($items['State']) ? $items['State'] : 2);
+            $setTrace .= sprintf("WHEN '%s' THEN '%s' ", $items['LogisticCode'], json_encode($items['Traces']));
+        }
+        $updateSQL = sprintf("
+            UPDATE %s
+                SET
+                    STATUS = CASE ExpressNumber %s END,
+                    express_trace = CASE ExpressNumber %s END,
+                    updated_at = %s
+            WHERE ExpressNumber IN (%s)
+                    ", $this->table, $setStatus, $setTrace, time(), substr($codes, 0, -1));
+
+        $mysql = DB::connection('mysql');
+        $mysql->enableQueryLog();
+        $rt = $mysql->update($updateSQL);
+        if(! $rt){
+            logger('jobs.error', ['sql'=>$updateSQL]);
+        }
+        return $rt;
+    }
+}

@@ -1,0 +1,61 @@
+<?php
+//要查询的yoms中的公共数据
+
+namespace App\Http\Controllers\Admin\Task;
+
+use Illuminate\Http\Request;
+
+use App\Http\Requests;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Config;
+use DB;
+class CommonController extends Controller
+{
+    //
+    public function __construct() {
+        //查找另外的数据库
+         Config::set('database.default', 'sqlsrv');
+        
+    }
+    
+    //找到所有部门
+    public function getAllDepartment($dbConfig='sqlsrv'){
+    
+       // DB::connection($dbConfig)->setFetchMode(2);
+        $sql = "SELECT TOP 1 * from Department";
+        $ret =  DB::select($sql);
+        dd($ret);
+        //return ['美工','运营','前端','技术'];
+      //$ret =  DB::table('dbo.Users')->join('dbo.department', 'dbo.Users.Department_id', '=', 'dbo.department.Department_id')->get();
+       //$ret = DB::table('dbo.Users')->where('User_Id','<','10')->get();
+       //$ret =  DB::select("select * from dbo.Users");
+       // $ret = DB::select(" SELECT Name FROM SysObjects Where XType='U' ORDER BY Name");
+       //dd($ret);找到所有的部门表
+//       $ret =  DB::select("select [Department_id], Code,Name,Department_id from dbo.Department where status = 0");
+       //$ret =  DB::select("select * from dbo.Users where status = 0 and IsLocked = 0");
+      //$ret =   DB::select("SELECT TOP 1000 Department_id,Name from dbo.Department");
+// $ret = DB::select("select top 3 * from dbo.Users join dbo.Department on dbo.Users.Department_id = dbo.Department.Department_id ");
+//       dd($ret);
+    }
+    
+    
+    //找到部门的所有员工
+    protected function getAllWorkerFromDepartment($department){
+        
+        if(intval($department) <= 0){
+            return [];
+        }
+        
+        else{
+            
+            
+            
+        }
+    }
+    
+    //找到员工的所有信息：
+    protected function getWorkerInfo($worker_id){
+        return [];
+    }
+    
+}

@@ -1,0 +1,57 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+class CreateAdminOrderExpressTable extends Migration
+{
+
+    protected $table = 'admin_order_express';
+
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::dropIfExists($this->table);
+
+        Schema::create($this->table, function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('OdCode', 20)->default('')->unique();
+            $table->string('TradeId', 20)->default('');
+            $table->float('ActuallyPaid')->default(0);
+            $table->float('ReceivableAmounts')->default(0);
+            $table->string('DispatchStatus', 20)->default('');
+            $table->string('ExpressNameActual', 20)->default('');
+            $table->string('ExpressNumber', 20)->default('');
+            $table->string('EXPRESSFEEACTUAL', 20)->default('');
+            $table->string('IsCod', 20)->default('');
+            $table->string('TotalProductQuantity', 20)->default('');
+            $table->string('ShopName', 20)->default('');
+            $table->char('PayTime', 19)->default('');
+            $table->char('OperateTime', 19)->default('');
+            $table->char('DeliveryDate', 19)->default('');
+            $table->string('BUYERMEMO', 20)->default('');
+            $table->string('SELLERMEMO', 20)->default('');
+            $table->string('PLATFORMMEMO', 20)->default('');
+            $table->string('REMARK', 20)->default('');
+            $table->tinyInteger('status')->default(0)->unsigned();
+            $table->string('express_trace')->default('');
+            $table->string('Reason')->default('');
+            $table->integer('created_at')->unsigned();
+            $table->integer('updated_at')->unsigned();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop($this->table);
+    }
+}

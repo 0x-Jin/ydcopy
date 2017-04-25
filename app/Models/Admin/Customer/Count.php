@@ -1,0 +1,91 @@
+<?php
+namespace App\Models\Admin\Customer;
+
+use App\Models\Admin\ModelWithoutMysql;
+
+class Count extends ModelWithoutMysql {
+
+
+    protected  function _queryDB($params, $path, $strQuery){
+        $isObSoleteWhere = isset($params['isObSolete']) ? '' : "And isObSolete = 0";
+
+        $sql1 = "
+        select
+            COUNT(distinct MemberCode) as allVip, ShopName from SalesOrder
+        where
+            {$params['timeType']} between '{$params['mathStart']} 00:00:00.000' and '{$params['mathEnd']} 23:59:59.999'
+        group by ShopName";
+        $rt1 = $this->_select($sql1);
+
+        $sql2 = "
+        select
+            COUNT(distinct MemberCode) as oldVip, ShopName from SalesOrder
+        where
+	        {$params['timeType']} between '{$params['mathStart']}' and '{$params['mathEnd']} 23:59:59.999'  --统计时间
+	        {$isObSoleteWhere}
+	        and TransType = 0 --固定查询订单类型为销售订单
+	        --and IsNewVip=0  --是否为新客户
+	        and MemberCode in
+		    (
+			    select distinct MemberCode
+			    from SalesOrder
+                where {$params['timeType']} between '{$params['compareStart']} 00:00:00.000' and '{$params['compareEnd']} 23:59:59.999' --参考时间
+		    )
+        group by ShopName";
+
+        $rt2 = $this->_select($sql2);
+        $sql3 = "
+        select
+            COUNT(Order_ID) as countOrder, ShopName from SalesOrder
+        where
+	        {$params['timeType']} between '{$params['mathStart']}' and '{$params['mathEnd']} 23:59:59.999'
+		    {$isObSoleteWhere}
+	        and TransType = 0 --固定查询订单类型为销售订单
+	        --and IsNewVip=0  --是否为新客户
+        group by ShopName";
+
+        $rt3 = $this->_select($sql3);
+
+        $rt1 = call_user_func_array(array($this, '_fmtSingleData'), [$rt1]);
+        $rt2 = call_user_func_array(array($this, '_fmtSingleData'), [$rt2]);
+        $rt3 = call_user_func_array(array($this, '_fmtSingleData'), [$rt3]);
+        $rt0 = array_merge_recursive($rt1, $rt2, $rt3);
+
+        if(!empty($rt0)){
+            $rt = call_user_func_array(array($this, '_fmtData'), [$rt0]);
+            $content = serialize($rt);
+            $this->_putQueryLog($path, $content, $strQuery);
+        }
+        return $rt;
+    }
+
+    protected function _fmtSingleData($rawData){
+        $fmtData = [];
+        foreach($rawData as $row){
+            $fmtData[$row['ShopName']] = array_except($row, 'ShopName');
+        }
+        return $fmtData;
+    }
+
+    protected function _fmtData($rawData){
+        $fmtData = [];
+        foreach($rawData as $key=>$row){
+            $allVip = array_get($row, 'allVip', 0);
+            $oldVip = array_get($row, 'oldVip', 0);
+            $countOrder = array_get($row, 'countOrder', 0);
+
+            $fmtData[] = [
+                "店铺"    => $key,
+                "会员总数" => $allVip,
+                "老会员数" => $oldVip,
+                "订单总数" => $countOrder,
+                "新赠会员数" => $allVip-$oldVip,
+                "重复购买率"  => empty($oldVip) ? 0 : round($countOrder/$oldVip, 2),
+                "重复购买次数" => empty($oldVip) ? 0 : round(($countOrder-$allVip)/$oldVip, 2),
+                "平均购买次数" => empty($allVip) ? 0 : round($countOrder/$allVip, 2),
+            ];
+        }
+        return $fmtData;
+    }
+
+}

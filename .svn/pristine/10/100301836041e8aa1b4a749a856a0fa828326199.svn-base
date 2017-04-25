@@ -1,0 +1,96 @@
+<?php
+
+Route::group(['middleware' => ['web']], function () {
+
+    Route::get('/', 'Auth\AuthController@getLogin');
+    Route::get('/login', 'Auth\AuthController@getLogin');
+    Route::post('/login', 'Auth\AuthController@postLogin');
+    Route::get('/logout', 'Auth\AuthController@logout');
+
+    Route::get('/t', 'Admin\TestController@index');
+    
+    Route::get('/tousu',['as'=>'tousu', 'uses'=>'ConsultController@index']);//客户投诉前台
+    Route::post('/tsdo',['as'=>'tsdo', 'uses'=>'ConsultController@doConsult']);//客户投诉处理
+    Route::post('/upload',['as'=>'upload', 'uses'=>'ConsultController@upload']);//客户投诉处理
+    Route::get('/address',['as'=>'address', 'uses'=>'ConsultController@address']);//客户投诉处理
+
+    Route::group(['namespace' => 'Admin', 'middleware'=>'auth'], function(){
+        Route::group(['namespace' => 'Goods'], function(){
+            Route::get('/goods/rank', 'RankController@index');
+            Route::post('/goods/rank', 'RankController@post');
+            Route::get('/goods/rank/export', 'RankController@export');
+
+            Route::get('/goods/tel', 'TelController@index');
+            Route::post('/goods/tel', 'TelController@post');
+            Route::get('/goods/tel/export', 'TelController@export');
+
+            Route::get('/goods/principal', 'PrincipalController@index');
+            Route::post('/goods/principal', 'PrincipalController@post');
+            Route::post('/goods/principal/save', 'PrincipalController@save');
+            Route::post('/goods/principal/del', 'PrincipalController@del');
+        });
+
+        Route::group(['namespace' => 'Plat'], function(){
+            Route::get('/plat/sale', 'SaleController@index');
+            Route::post('/plat/sale', 'SaleController@post');
+            Route::get('/plat/sale/export', 'SaleController@export');
+
+            Route::get('/plat/back', 'BackController@index');
+            Route::post('/plat/back', 'BackController@post');
+            Route::get('/plat/back/export', 'BackController@export');
+
+            Route::get('/plat/cat', 'CatController@index');
+            Route::post('/plat/cat', 'CatController@post');
+            Route::get('/plat/cat/export', 'CatController@export');
+        });
+
+        Route::group(['namespace' => 'Customer'], function(){
+            Route::get('/customer/count', 'CountController@index');
+            Route::post('/customer/count', 'CountController@post');
+            Route::get('/customer/count/export', 'CountController@export');
+
+            Route::get('/goods/rebuy', 'RebuyController@index');
+            Route::post('/goods/rebuy', 'RebuyController@post');
+            Route::get('/goods/rebuy/export', 'RebuyController@export');
+        });
+        
+        Route::group(['namespace' => 'Consult'], function(){
+            Route::get('/consult/index',['as'=>'consult.index', 'uses'=>'IndexController@index']);//需要增加删除
+            Route::get('/consult/dele',['as'=>'consult.dele', 'uses'=>'IndexController@delete']);//需要增加删除
+            Route::post('/consult/post',['as'=>'consult.post',  'uses'=>'IndexController@post']);
+            Route::post('/consult/edit',['as'=>'consult.edit', 'uses'=>'IndexController@edit']);//修改部分
+            Route::post('/consult/doEdit',['as'=>'consult.doEdit', 'uses'=>'IndexController@doEdit']);
+        });
+
+        Route::group(['namespace' => 'Task'], function(){
+            Route::get('/task/note', 'NoteController@index');
+            Route::post('/task/note', 'NoteController@post');
+
+            Route::get('/task/express', 'ExpressController@index');
+            Route::post('/task/express', 'ExpressController@post');
+            Route::post('/task/express/trace', 'ExpressController@trace');
+            
+            Route::get('/taskmanage/index',['as'=>'taskmanage.index', 'uses'=>'ManageController@index']);
+            Route::get('/taskmanage/addmanage',['as'=>'taskmanage.add', 'uses'=>'ManageController@add']);//添加显示
+            Route::post('/taskmanage/ajax',['as'=>'taskmanage.ajax', 'uses'=>'ManageController@showProgress']);//ajax请求
+            Route::post('/taskmanage/doadd',['as'=>'taskmanage.doadd', 'uses'=>'ManageController@doadd']);//添加修改
+            Route::post('/taskmanage/post',['as'=>'taskmanage.post',  'uses'=>'ManageController@post']);
+            Route::post('/taskmanage/edit',['as'=>'taskmanage.edit', 'uses'=>'ManageController@edit']);
+            Route::post('/taskmanage/doEdit',['as'=>'taskmanage.doedit', 'uses'=>'ManageController@doEdit']);
+            Route::get('/taskmanage/dele',['as'=>'taskmanage.dele','uses'=>'ManageController@dele']);
+            Route::post('/taskmanage/upload',['as'=>'taskmanage.upload','uses'=>'ManageController@upload']);
+            Route::post('/taskmanage/firstedit',['as'=>'taskmanage.firstedit','uses'=>'ManageController@firstedit']);
+            Route::get('/taskmanage/getperson','ManageController@ajaxperson');
+            Route::get('/taskmanage/export','ManageController@export');
+        });
+
+        Route::group(['namespace' => 'Tool'], function(){
+            Route::get('/tool/store', 'StoreController@index');
+            Route::post('/tool/store', 'StoreController@post');
+
+            Route::get('/tool/ordergoods', 'OrderGoodsController@index');
+            Route::post('/tool/ordergoods', 'OrderGoodsController@post');
+        });
+    });
+});
+

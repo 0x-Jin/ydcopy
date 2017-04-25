@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Goods;
+
+use Illuminate\Http\Request as Req;
+use App\Http\Controllers\Controller;
+use App\Models\Admin\Goods\Rank as Mdl;
+
+class RankController extends Controller {
+
+
+    public function post(Req $req, Mdl $mdl){
+        $max = strtotime($req->deliveryStart) + 2*30*24*3600;
+        $this->validate($req, [
+            'platForm'      => 'required',
+            'deliveryStart' => 'required|before:deliveryEnd',
+            'deliveryEnd'   => 'required|after:deliveryStart|max_date:'.$max,
+        ], [
+            'deliveryStart.required' => '请输入起始时间',
+            'deliveryEnd.required'   => '请输入截止时间',
+            'deliveryEnd.max_date'   => '时间间隔不能超过2个月',
+        ]);
+
+        $from = $req->nocache ? 'db' : 'file';
+        $params = $req->except(['_token', 'nocache']);
+        $req->flashExcept(['_token', 'nocache']);
+
+        $data = $params ? $mdl->getData($params, $from) : [];
+
+        return view($this->getCurrentPath(), [ 'total'=>count($data), 'data'=>array_slice($data, 0, 1000), 'file'=>$mdl->dataPath]);
+    }
+}

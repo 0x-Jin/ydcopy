@@ -1,0 +1,341 @@
+<div class="modal-dialog" style="width: 1080px;" xmlns="http://www.w3.org/1999/html">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">工作管理>任务管理>任务编辑</h4>
+        </div>
+        <div class="modal-body">
+            {!! Form::open(array('url'=>'taskmanage/doEdit','class'=>'form-horizontal','id'=>'interviewForm')) !!}
+            <input type='hidden' name='task_id' value='{{$current['data']['task_id']}}'/>
+            <!--上几级结束-->
+            @if($last)
+                @foreach($last as $k=>$single)
+                    <div class="main" style="overflow:hidden;">
+                        <div class="form-group">
+                            <label for="title" class=" col-md-1 col-md-title">@if($k == 0)发起人@else 接收人@endif</label>
+                            <label for="title" class=" col-md-1 col-md-info">部门</label>
+                            <label for="title" class="col-md-1 col-md-info">员工</label>
+                            <label for="title" class=" col-md-1  col-md-info">@if($k == 0)期望时间@else 预计完成时间 @endif</label>
+                            <label for="title" class=" col-md-1  col-md-info">操作日期</label>
+                        </div>
+                        <div class="form-group accordion-group">
+                            <label for="title" class=" col-md-1 manage-arrow-down">↓</label>
+                            <div class="col-md-7" style="width: 20%;text-align: center;">
+                                <span style="text-align: center;">  {{$single['data']['current_department']}} </span>
+                                <span class="error-span"></span>
+                            </div>
+                            <div class="col-md-7" style="width: 20%;text-align: center;">
+                                <span style="text-align: center;">  {{$single['data']['currentone']}} </span>
+                            </div>
+
+                            <div class="col-md-7" style="width: 20%;">
+                                <span class="time-plug  ">{{date('Y-m-d h:i',$single['data']['expire_time'])}}</span>
+                            </div>
+                            <div class="col-md-7" style="width: 20%;">
+                                <span class="time-end  ">{{date('Y-m-d h:i',$single['data']['op_time'])}}</span>
+                            </div>
+                        </div>
+                        <div class="form-group form-width">
+                            <label for="title" class=" col-md-1" style="border: 0px">描述</label>
+
+                            <div class="col-md-7">
+                                <span style="text-align: center;" id="title">{{$single['data']['remark']}}</span>
+                                <span class="error-span"></span>
+                            </div>
+                        </div>
+                        <div class="form-group form-width">
+                            <label for="title" class=" col-md-1" style="border: 0px">附件</label>
+                            <div class="col-md-7">
+                                @foreach($single['data']['addons'] as $v)
+                                    <span class="hyperlink">
+                                        <a href='downlist?name={{$v}}'>{{$v}}</a>
+                                    </span>
+                                    <span>
+                                        <a href='downlist?name={{$v}}' class="download"></a>
+                                    </span>
+                                @endforeach
+                                <span class="error-span"></span>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                    @endif
+                            <!--上几级结束-->
+                    <!--当前级-->
+                    @if($current)
+                        <div class="main" style="overflow: hidden;">
+                            <div class="form-group">
+                                <label for="title" class="col-md-1 col-md-title">当前级</label>
+                                <label for="title" class="col-md-1 col-md-info">部门</label>
+                                <label for="title" class="col-md-1 col-md-info">员工</label>
+                                <label for="title" class=" col-md-1 col-md-info">预计完成时间</label>
+                                <label for="title" class="col-md-1 col-md-info">操作日期</label>
+                            </div>
+                            <div class="form-group">
+                                @if($current['data']['status']== 'on')
+                                    <label for="title" class="accordion-heading col-md-1 manage-label-add">
+                                        <a id="open-info " class=" manage-arrow-add accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#collapseTwo">
+                                            +
+                                        </a>
+                                    </label>
+                                @else
+                                    <label for="title" class="accordion-heading col-md-1 manage-arrow-down">↓</label>
+                                @endif
+                                <div class="col-md-7" style="width: 20%;text-align: center;">
+                                    <span style="text-align: center;">{{$current['data']['current_department']}}</span>
+                                    <span class="error-span"></span>
+                                </div>
+                                <div class="col-md-7" style="width: 20%;text-align: center;">
+                                    <span style="text-align: center;">{{$current['data']['currentone']}}</span>
+                                </div>
+                                <input type='hidden' name='detail_task_id' value='{{$current['data']['detail_id']}}'/>
+                                @if($current['write'])
+                                    @if($current['data']['expire_time'])
+                                        <div class="col-md-7" style="width: 20%;">
+                                            {!! Form::text('current[expire_time]', date('Y-m-d h:i',$current['data']['expire_time']), ['class' => 'time-plug form-control datepicker','checkform-type'=>'date' 'checkform-msg'=>'预计完成时间不合规则']) !!}
+                                        </div>
+                                    @else
+                                        <div class="col-md-7" style="width: 20%;">
+                                            {!! Form::text('current[expire_time]', date('Y-m-d h:i',time()), ['class' => 'time-plug form-control datepicker']) !!}
+                                        </div>
+                                    @endif
+                                @else
+                                    <div class="col-md-7" style="width: 20%;text-align: center;">
+                                        {{date('Y-m-d h:i',$current['data']['expire_time'])}}
+                                    </div>
+                                @endif
+                                @if($current['write'])
+                                    @if($current['data']['op_time'])
+                                        <div class="col-md-7" style="width: 20%;">
+                                            {!! Form::text('current[op_time]', date('Y-m-d h:i',$current['data']['op_time']), ['class' => 'time-plug form-control datepicker']) !!}
+                                        </div>
+                                    @else
+                                        <div class="col-md-7" style="width: 20%;">
+                                            {!! Form::text('current[op_time]', date('Y-m-d h:i',time()), ['class' => 'time-plug form-control datepicker']) !!}
+                                        </div>
+                                    @endif
+                                @else
+                                    <div class="col-md-7" style="width: 20%;text-align: center;">
+                                        {{date('Y-m-d h:i',$current['data']['op_time'])}}
+                                    </div>
+                                @endif
+                           </div>
+                            <div class="form-group form-width">
+                                <label for="title" class=" col-md-1" style="border: 0px">备注</label>
+
+
+                                <div class="col-md-7" style="width:90%">
+                                    @if($current['write'])
+                                        <textarea class="form-control" name="current[remark]" value="$current['data']['remark']" type="text" id="title"></textarea>
+                                    @else
+                                        <span style="text-align: center;">{{$current['data']['remark']}}</span>
+                                    @endif
+                                    <span class="error-span"></span>
+                                </div>
+                            </div>
+                            <div class="form-group form-width">
+                                <label for="title" class="col-md-1" style="border: 0px">附件</label>
+                                
+                                <div class="col-md-7">
+                                    @if($current['write'])
+                                        <span class="btn btn-success fileinput-button" id='fileupload'>
+                                            <i class="glyphicon glyphicon-plus"></i>
+                                            <span>上传附件</span>
+                                            <input type="file" name="files" multiple>
+                                        </span>
+                                    @endif
+                                    <table id='addons_list'>
+                                        @foreach($current['data']['addons'] as $v)
+                                            <tr>
+                                                <td>
+                                                    @if($current['write'])
+                                                        <input name='current[addons][]' type='hidden' value='{{$v}}'/>
+                                                    @endif
+                                                    {{$v}}<a href='downlist?name={{$v}}'>下载</a>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </table>
+                                    <span class="error-span"></span>
+                                </div>
+                            </div>
+                            <div class="form-group form-width">
+                                <label for="title" class="col-md-1" style="border: 0px">优先级</label>
+
+                                <div class="col-md-7">
+                                    @if($current['write'])
+                                        {!! Form::text('current[rank]', $current['data']['rank'], ['class' => 'form-control']) !!}
+                                    @else
+                                        <span style="text-align: center;"> {{$current['data']['rank']}}
+                        </span>
+                                    @endif
+                                    <span class="error-span"></span>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+                                <!---当前级结束-->
+
+                        <!--下一级-->
+                        @if($next)
+                            <div class="main" style="overflow: hidden;">
+                                <div class="form-group">
+                                    <label for="title" class="col-md-1 col-md-title">下一级</label>
+                                    <label for="title" class=" col-md-1 col-md-info">部门</label>
+                                    <label for="title" class="col-md-1 col-md-info">员工</label>
+                                    <label for="title" class="col-md-1 col-md-info">预计完成时间</label>
+                                    <label for="title" class="col-md-1 col-md-info">操作日期</label>
+                                </div>
+                                <div class="form-group">
+                                    <label for="title" class="accordion-heading  col-md-1 manage-label-add"> </label>
+
+                                    <div class="col-md-7" style="width: 20%;text-align: center;">
+                                        <span style="text-align: center;">{{$next['data']['current_department']}}</span>
+                                    </div>
+                                    <div class="col-md-7" style="width: 20%;text-align: center;">
+                                        <span style="text-align: center;">{{$next['data']['currentone']}}</span>
+                                    </div>
+
+                                    <div class="col-md-7" style="width: 20%;text-align: center;">
+                                        @if($current['data']['expire_time'])
+                                            {{date('Y-m-d h:i',$current['data']['expire_time'])}}
+                                        @endif
+                                    </div>
+
+                                    <div class="col-md-7" style="width: 20%;text-align: center;">
+                                        @if($current['data']['op_time'])
+                                            {{date('Y-m-d h:i',$current['data']['op_time'])}}
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="form-group form-width">
+                                    <label for="title" class="col-md-1" style="border: 0px">备注</label>
+
+                                    <div class="col-md-7">
+                                        <span style="text-align: center;"> {{$next['data']['remark']}}</span>
+                                        <span class="error-span"></span>
+                                    </div>
+                                </div>
+                                <div class="form-group form-width">
+                                    <label for="title" class="col-md-1" style="border: 0px">附件</label>
+
+                                    <div class="col-md-7">
+                                        @foreach($next['data']['addons'] as $v)
+                                            <span style="line-height: 45px;">
+                            {{$v}}<a href='downlist?name={{$v}}'>下载</a>
+                        </span>
+                                        @endforeach
+                                        <span class="error-span"></span>
+                                    </div>
+                                </div>
+                                <div class="form-group form-width">
+                                    <input name="id" type="hidden" value="2"/>
+                                    <label for="title" class="col-md-1" style="border: 0px">优先级</label>
+
+                                    <div class="col-md-7">
+
+                                        <span style="text-align: center;border: 0px;width: 100%;">{{$next['data']['rank']}}</span>
+
+                                        <span class="error-span"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!---下一级结束-->
+                            @else
+                                    <!--- 当前状态还是进行  --->
+                            <div class="accordion-body collapse main mian-info" id="collapseTwo">
+                                <div class="form-group">
+                                    <label for="title" class="col-md-1  col-md-title">
+                                        下一级
+                                        <span id="close-info" class="manage-arrow-close">×</span></label>
+                                    <label for="title" class="col-md-1 col-md-info ">部门</label>
+                                    <label for="title" class=" col-md-1  col-md-info">员工</label>
+                                    <label for="title" class="col-md-1 col-md-info">期望时间</label>
+                                    <label for="title" class=" col-md-1 col-md-info">操作日期</label>
+                                </div>
+                                <script>
+                                    function giveperson() {
+                                        var val = $("#getone").find("option:selected").val();
+                                        if (val == '') {
+                                            $('#worker').html('');
+                                            $('#worker').append("<option value=''>请选择部门</option>");
+                                        }
+                                        //请求部分
+                                        $.ajax({
+                                            type: "GET",
+                                            url: "getperson",
+                                            data: {did: val},
+                                            dataType: "html",
+                                            success: function (data) {
+                                                $('#worker').html('');
+                                                $('#worker').append(data);
+                                            }
+                                        });
+                                    }
+                                </script>
+                                <div class="form-group">
+                                    <label for="title" class="col-md-1 col-md-title"></label>
+
+                                    <div class="col-md-7" style="width: 20%;">
+                                        <select  style="width: 50%;margin: 0 auto;"  checkform-type='required' checkform-msg='部门不能为空' checkform-quick='on' id="getone" name="next[current_department]" class="form-control" onchange='giveperson()'>
+                                            <option value=''>请选择</option>
+                                            @foreach($alldepartment as $v)
+                                                <option value='{{$v->Department_id}}'>{{$v->Name}}</option>
+                                            @endforeach
+                                        </select>
+                                        <span class="error-span"></span>
+                                    </div>
+                                    <div class="col-md-7" style="width: 20%;">
+                                        <select  style="width: 50%;margin: 0 auto;"  name="next[currentone]" class="form-control" id="worker"  checkform-type='required' checkform-msg='人员不能为空' checkform-quick='on'>
+                                            <option value="">请选择员工</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+        </div>
+        @if(!$next && $current['data']['status']== 'on')
+            <div class="modal-footer" id='buttonall'>
+                <button type="submit" value="baocun" onclick='tosubmit(1)' class="btn btn-success btn-save" id="pass" name="save">保存</button>
+                <button type="submit" value="turn" onclick='tosubmit(2)' class="btn btn-success btn-save" id="pass" name="turn">流转</button>
+                <button type="submit" value="wanjie" onclick='tosubmit(3)' class="btn btn-warning" id="finish" name="finished">完结</button>
+            </div>
+        @endif
+        {!! Form::close() !!}
+    </div>
+</div>
+<script src="{{ asset('assets/js/jquery-upload/js/vendor/jquery.ui.widget.js') }}"></script>
+<script src="{{ asset('assets/js/jquery-upload/js/jquery.fileupload.min.js') }}"></script>
+<script type='text/javascript' src='{{ asset('assets/js/formvalidate.js'}}'></script>
+<script>
+    $(function () {
+        @if ($current['write'])
+        //准备上传部分-
+        $("#fileupload").fileupload({
+            url: '{{URL::route('taskmanage.upload')}}',
+            formData: {_token: index_ajax_token},
+            sequentialUploads: true,
+            done: function (e, data) {
+                if (data.result.error || data.error) {
+                    alert(data.result.msg);
+                } else {
+                    $('#addons_list').append("<tr><td><input type='hidden' name='current[addons][]' value='" + data.result.short + "'>" + data.result.short + "</td></tr>");
+                }
+            }
+        });
+        @endif
+    });
+    $(function () {
+        $("#close-info").click(function () {
+            $(".mian-info").removeClass("in");
+            $(".mian-info").addClass("collapse");
+            if ($(".mian-info .collapse").is(":hidden")) {
+                $('.modal-body').find('#open-info').css('color', 'green')
+            } else {
+                $('.modal-body').find('#open-info').css('color', 'red')
+            }
+        })
+    });
+</script>
+

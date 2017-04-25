@@ -1,0 +1,29 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Goods;
+
+use Illuminate\Http\Request as Req;
+use App\Http\Controllers\Controller;
+
+
+class TelController extends Controller {
+
+    public function post(Req $req, Mdl $mdl){
+        $this->validate($req, [
+            'start'   => 'required|before:end',
+            'end'     => 'required|after:start|over_time_requiredWith:'.(2*30*24*3600).',start,skuCode,keyWord',
+        ], [
+            'start.required'   => '请输入起始时间',
+            'end.required'     => '请输入截止时间',
+            'end.over_time_required_with'     => '时间间隔>2个月，编码或关键字必填',
+        ]);
+
+        $from = $req->nocache ? 'db' : 'file';
+        $params = $req->except(['_token', 'nocache']);
+        $req->flashExcept('_token');
+
+        $data = $params ? $mdl->getData($params, $from) : [];
+
+        return view($this->getCurrentPath(), [ 'total'=>count($data), 'data'=>array_slice($data, 0, 100), 'file'=>$mdl->dataPath]);
+    }
+}

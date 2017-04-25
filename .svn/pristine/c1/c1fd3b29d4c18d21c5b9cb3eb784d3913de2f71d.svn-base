@@ -1,0 +1,21 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Tool;
+
+use Illuminate\Http\Request as Req;
+use App\Http\Controllers\Controller;
+use App\Models\Admin\Tool\OrderGoods as Mdl;
+
+class OrderGoodsController extends Controller {
+
+
+    public function post(Req $req, Mdl $mdl){
+        $this->validate($req, [
+            'shipment_id' => 'required',
+        ]);
+
+        $params = $req->except(['_token', 'nocache']);
+        $data = $params ? $mdl->getData($params) : [];
+        return response()->json($data);
+    }
+}

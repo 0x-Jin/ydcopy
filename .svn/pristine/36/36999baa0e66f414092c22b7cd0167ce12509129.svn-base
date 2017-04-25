@@ -1,0 +1,14 @@
+<?php
+
+namespace App\Models\Admin\Goods;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Principals extends Model {
+
+    protected $table = 'goods_principals';
+    protected $dateFormat = 'U';
+    protected $fillable = ['bn', 'name', 'principal', 'extra'];
+
+
+}

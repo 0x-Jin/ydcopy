@@ -1,0 +1,17 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use URL;
+use App\Api\Kuaidiniao\Search;
+
+class TestController extends Controller {
+
+
+    public function index(){
+        $kdniao = new Search();
+        $kdniao->test();
+    }
+
+}

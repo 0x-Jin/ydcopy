@@ -1,0 +1,227 @@
+<?php
+return [
+    'siderbars' => [
+        [
+            'title'=>'决策报表',
+            'icon'=>'fa-gavel',
+            'node'=>'Admin',
+            'children'=>[
+                [
+                    'title'=>'商品报表',
+                    'icon'=>'fa-gift',
+                    'node'=>'Goods',
+                    'children'=>[
+                        [ 'title' => '商品排名统计', 'icon'=>'fa-list', 'node'=>'Rank'],
+                        [ 'title' => '商品关键字通讯录', 'icon'=>'fa-book', 'node'=>'Tel'],
+                        [ 'title' => '商品负责人', 'icon'=>'fa-book', 'node'=>'Principal'],
+                        [ 'title' => '商品禁批', 'icon'=>'fa-book', 'node'=>'Limit'],
+                    ],
+                ],
+                [
+                    'title'=>'店铺报表',
+                    'icon'=>'fa-clipboard',
+                    'node'=>'Plat',
+                    'children'=>[
+                        [ 'title' => '店铺销售汇总', 'icon'=>'fa-pie-chart', 'node'=>'Sale'],
+                        [ 'title' => '店铺退货退款统计', 'icon'=>'fa-bar-chart', 'node'=>'Back'],
+                        [ 'title' => '店铺分类销售统计', 'icon'=>'fa-line-chart', 'node'=>'Cat'],
+                    ],
+                ],
+                [
+                    'title'=>'会员报表',
+                    'icon'=>'fa-users',
+                    'node'=>'Customer',
+                    'children'=>[
+                        [ 'title' => '会员复购率统计', 'icon'=>'fa-pie-chart', 'node'=>'Count'],
+                        [ 'title' => '商品回购率统计', 'icon'=>'fa-list', 'node'=>'Rebuy'],
+                    ],
+                ],
+            ],
+        ], [
+            'title'=>'客户管理',
+            'icon'=>'fa-users',
+            'node'=>'consult',
+            'children'=>[
+                [ 'title'=>'客户投诉管理', 'icon'=>'fa-male', 'node'=>'index',],
+            ]
+        ], [
+            'title'=>'工作管理',
+            'icon'=>'fa-wrench',
+            'node'=>'task',
+            'children'=>[
+                [ 'title'=>'任务管理工具', 'icon'=>'fa-tasks', 'node'=>'manageindex',],
+                [ 'title'=>'运营计划管理', 'icon'=>'fa-foursquare', 'node'=>'customer',],
+                [ 'title'=>'客服日志', 'icon'=>'fa-comments', 'node'=>'note',],
+                [ 'title'=>'发货包裹监控', 'icon'=>'fa-twitter', 'node'=>'express',],
+                [ 'title'=>'大单审批', 'icon'=>'fa-twitter', 'node'=>'decision',],
+                [ 'title'=>'破损管理', 'icon'=>'fa-foursquare', 'node'=>'damage',],
+            ]
+        ], [
+            'title'=>'工具管理',
+            'icon'=>'fa-wrench',
+            'node'=>'tool',
+            'children'=>[
+                [ 'title'=>'WMS批号库存查询', 'icon'=>'fa-tasks', 'node'=>'store',],
+                [ 'title'=>'WMS销售订单商品批号查询', 'icon'=>'fa-foursquare', 'node'=>'ordergoods',],
+                [ 'title'=>'天猫导出', 'icon'=>'fa-foursquare', 'node'=>'platorder',],
+                [ 'title'=>'取消配货单', 'icon'=>'fa-foursquare', 'node'=>'delivery',],
+            ]
+        ],
+    ],
+    'select' => [
+        'platForms0' => [
+            'label'=>'店铺',
+            'opts' => [
+                '0'  => '全部',
+                '1'  => '益丰大药房旗舰店',
+                '2'  => '360健康',
+                '5'  => '京东旗舰店',
+                '11' => '一号店',
+                '38' => '益丰官网',
+                '99' =>'益丰保健品专营店',
+            ]
+        ],
+        'platForms1' => [
+            'label'=>'店铺',
+            'opts' => [
+                '0'   => '全部',
+                '001' => '益丰官网',
+                '002' => '京东旗舰店',
+                '003' => '一号店',
+                '004' => '益丰大药房旗舰店',
+                '005' => '康祝一号店',
+                '006' => '360健康',
+                '007'=>'益丰保健品专营店',
+            ]
+        ],
+        'platForms2' => [
+            'label'=>'店铺',
+            'opts' => [
+                '0'   => '全部',
+                'FCA80608-1B20-4FD1-9300-A51300F6EFB1' => '益丰官网',
+                'AAF87BE0-75BF-423D-A479-A51400A4A60F' => '京东旗舰店',
+                '7253E8CC-014A-43D4-BFF3-A51400A4DD62' => '一号店',
+                'F2DED9AA-57F1-44E2-A5E7-A51400A511F4' => '益丰大药房旗舰店',
+                'EE3E4E93-1A14-4647-92E4-A51400A55412' => '康祝一号店',
+                '826DD99B-6929-42C7-8BE7-A57E00C43E9C' => '360健康',
+                '936587FD-8ACA-4661-8228-A68E01204BB2' => '益丰保健品专营店',
+            ]
+        ],
+        'platForms3' => [
+            'label'=>'店铺',
+            'opts' => [
+                '全部' => '全部',
+                '益丰大药房旗舰店' => '益丰大药房旗舰店',
+                '360健康' => '360健康',
+                '京东旗舰店' => '京东旗舰店',
+                '一号店' => '一号店',
+                '益丰官网' => '益丰官网',
+                '益丰保健品专营店'=>'益丰保健品专营店',
+            ]
+        ],
+        'dpmc' => [
+            'label'=>'店铺',
+            'opts' => [
+                '001' => '益丰官网',
+                '002' => '京东旗舰店',
+                '003' => '一号店',
+                '004' => '天猫旗舰店',
+                '005' => '康祝一号店',
+            ]
+        ],
+        //<!-- 兼容JS，每个值+1-->
+        'orderType' => [
+            'label'=>'订单类型',
+            'opts' => [
+                '0'   => '全部',
+                '1' => '销售订单',
+                '3' => '费用订单',
+                '9' => '换货订单',
+                '17' => '补发订单',
+                '33' => '补发票订单',
+            ]
+        ],
+        'timeType' => [
+            'label'=>'时间类型',
+            'opts' => [
+                'recordDate'    => '记录时间',
+                'createDate'    => '制单时间',
+                'platDate'      => '平台发货时间',
+                'payDate'       => 'WMS发货时间',
+                'deliveryDate'  => '支付时间',
+            ]
+        ],
+        //增加咨询内容的部分
+        'consult' => [
+            'label'=>'平台',
+            'opts'=>[
+                '' => '全部',
+                'yhd' => '一号店',
+                'jd' =>'京东',
+                'tmall' => '天猫',
+                'yfdyf'=>'益丰大药房',
+                'other'=>'其他'
+            ]
+        ],
+        //投诉状态
+        'consultsta'=>[
+            'label'=>'投诉状态',
+            'opts'=>[
+                '0'=>'全部',
+                'review'=>'审核中',
+                'pass'=>'通过',
+                'end'=>'完结'
+            ]
+        ],
+        //任务状态
+        'taskstatus'=>[
+            'label'=>'任务状态',
+            'opts'=>[
+                '0'=>'全部',
+                'on'=>'进行中',
+                'finished'=>'完成'
+            ]
+        ],
+        'damageshopname'=>[
+            'label'=>'店铺',
+            'opts'=>[
+                 '0'=>'全部',
+                '益丰官网' => '益丰官网',
+                '京东旗舰店' => '京东旗舰店',
+                '一号店' => '一号店',
+                '益丰大药房旗舰店' => '益丰大药房旗舰店',
+                '康祝一号店' => '康祝一号店',
+            ]
+        ],
+        'damagereason'=>[
+            'label'=>'选择原因',
+            'opts'=>[
+                0=>'选择原因',
+                1=>'快递运输途中破损',
+                2=>'快递运输途中丢件',
+                3=>'仓库发货无物流信息',
+                4=>'仓库错发',
+                5=>'仓库少发',
+                6=>'商品质量问题',
+                7=>'运营问题',
+                8=>'客服问题',
+                9=>'其他(备注说明)'
+            ]
+        ],
+        'damageperson'=>[
+            'label'=>'选择责任方',
+            'opts'=>[
+                0=>'选择责任方',
+                1=>'圆通',
+                2=>'中通',
+                3=>'京东',
+                4=>'顺丰',
+                5=>'客服',
+                6=>'仓库',
+                7=>'运营',
+                8=>'公司'
+            ]
+        ],        
+    ],
+
+];
